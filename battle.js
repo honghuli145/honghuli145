@@ -54,7 +54,7 @@ function renderBattle(){
         <button class="speed-btn ${B.auto?'on':''}" onclick="toggleAuto()">${B.auto?'⏹停止':'🤖自动'}</button>
       </div>
     </div>
-    ${banner}
+    <div class="bbanner-slot">${banner}</div>
     <div id="blog">${B.log.map(l => `<div>${l}</div>`).join('')}</div>
     <div class="bteam bteam-bot">${pl.map(renderBUnit).join('')}</div>
     <div id="tacticalBar">${tacticalBarHTML()}</div>
@@ -110,18 +110,23 @@ function executeRetreat(){
 function tacticalBarHTML(){
   if(B.over) return '';
   const cur = B.cur;
-  const isPlayerTurn = cur && cur.side === 'player';
+  if(!cur){ return '<div class="bhint" style="width:100%">—</div>'; }
+  const isHotseat = B.mode === 'free' && B.freeMode === 'hotseat';
+  const isP = cur.side === 'player';
+  const canControl = isP || isHotseat;
   const buttons = [];
-  if(isPlayerTurn && B.tactical){
-    const eq = B.tactical.playerEquipped || [];
-    if(eq.length === 0){ buttons.push('<div class="bhint" style="width:100%">未装备指令</div>'); }
-    else {
-      const used = B.tactical.playerUsed || [];
+  if(canControl && B.tactical){
+    const eq = isP ? (B.tactical.playerEquipped || []) : (B.tactical.enemyEquipped || []);
+    if(eq.length === 0){
+      buttons.push('<div class="bhint" style="width:100%">未装备指令</div>');
+    } else {
+      const used = isP ? (B.tactical.playerUsed || []) : (B.tactical.enemyUsed || []);
       const isMap = B.mode === 'map';
       const unitBlocked = cur.usedTacticalThisTurn;
       const noSlots = used.length >= eq.length;
       eq.forEach(tid => {
-        const t = TACTICALS.find(x => x.id === tid); if(!t) return;
+        const t = TACTICALS.find(x => x.id === tid);
+        if(!t) return;
         const isUsed = used.includes(tid);
         const cls = ['tbtn', 'tier-' + t.tier];
         if(isUsed || unitBlocked || noSlots) cls.push('used');
@@ -130,7 +135,9 @@ function tacticalBarHTML(){
         buttons.push(`<button class="${cls.join(' ')}" onclick="useTactical('${t.id}')" title="${t.desc}"><span class="ttier">T${t.tier}</span>${t.icon} ${t.name}${priceHtml}</button>`);
       });
     }
-  } else { buttons.push('<div class="bhint" style="width:100%">—</div>'); }
+  } else {
+    buttons.push('<div class="bhint" style="width:100%">—</div>');
+  }
   if(B.retreatSelect){
     const need = getRetreatNeeded();
     buttons.push(`<button class="tbtn retreat-btn active" onclick="cancelRetreat()">✖ 取消 (${B.retreatPicked.length}/${need})</button>`);
@@ -174,14 +181,26 @@ function battleActionHTML(){
     if(B.auto) return '<div class="bhint">🤖 自动战斗中…</div>';
     const u = B.cur; const dist = STG[B.stageIdx].d;
     const foes = B.units.filter(x => x.alive && x.side !== u.side);
-    if(!foes.some(f => canAtk(u, dist))) return '<div class="bhint">射程不足</div>';
-    return `<div class="bhint">点击敌方</div>
+    const sideTag = (B.mode === 'free' && B.freeMode === 'hotseat') ? (u.side === 'player' ? '🔵 蓝方' : '🔴 红方') + ' · ' : '';
+    if(!foes.some(f => canAtk(u, dist))){
+      return `<div class="bhint">${sideTag}射程不足</div>
+        <div style="text-align:center;margin-top:6px"><button class="btn sm" onclick="skipPlayerTurn()">⏭ 跳过本回合</button></div>`;
+    }
+    return `<div class="bhint">${sideTag}点击敌方</div>
       <div class="bdl">${foes.map(f => { const r = calcDamageRange(u, f, dist, B.ccRound);
         if(r.max <= 0) return `<div class="bdi">${f.icon}${f.name} 射程外</div>`;
         return `<div class="bdi" onclick="clickBUnit('${f.uid}')">${f.icon}${f.name}<b>-${fmtDmgRange(r)}</b></div>`; }).join('')}</div>`;
   }
   return '<div class="bhint">等待中…</div>';
 }
+
+function skipPlayerTurn(){
+  if(B.await !== 'target') return;
+  const r = B.resolve;
+  B.resolve = null; B.await = null;
+  if(r) r({ __skip: true });
+}
+
 function buildBattleOrder(){
   const alive = B.units.filter(u => u.alive);
   const groups = new Map();
@@ -227,23 +246,30 @@ function showBattleDetail(u){
 function waitPlayerTarget(u){ return new Promise(r => { B.resolve = r; B.await = 'target'; render(); }); }
 
 function useTactical(tacId){
-  if(!B.cur || B.cur.side !== 'player' || B.over || B.auto) return;
+  if(!B.cur || B.over || B.auto) return;
+  const isHotseat = B.mode === 'free' && B.freeMode === 'hotseat';
+  const side = B.cur.side;
+  if(side !== 'player' && !isHotseat) return;
   const u = B.cur;
   if(u.usedTacticalThisTurn){ toast('本回合已使用过指令'); return; }
-  const eq = B.tactical.playerEquipped || [];
-  const used = B.tactical.playerUsed || [];
+  const isP = side === 'player';
+  const eq = isP ? (B.tactical.playerEquipped || []) : (B.tactical.enemyEquipped || []);
+  const used = isP ? (B.tactical.playerUsed || []) : (B.tactical.enemyUsed || []);
   if(!eq.includes(tacId)){ toast('未装备该指令'); return; }
   if(used.includes(tacId)){ toast('该指令已用过'); return; }
   if(used.length >= eq.length){ toast('指令已用尽'); return; }
-  const t = TACTICALS.find(x => x.id === tacId); if(!t) return;
-  if(B.mode === 'map'){
-    const sv = getMapCur(); if(!sv) return;
+  const t = TACTICALS.find(x => x.id === tacId);
+  if(!t) return;
+  if(B.mode === 'map' && isP){
+    const sv = getMapCur();
+    if(!sv) return;
     const price = tacCarryPrice(t.tier);
     if(sv.rp < price){ toast(`RP不足（需 ${price}）`); return; }
-    sv.rp -= price; persistMapSaves();
+    sv.rp -= price;
+    persistMapSaves();
   }
   SFX.tac();
-  applyTactical(t, u, 'player');
+  applyTactical(t, u, side);
   u.usedTacticalThisTurn = true;
   used.push(tacId);
   render();
@@ -479,7 +505,12 @@ async function runBattle(){
         addBLog(`🚗 <b class="${u.side === 'player' ? 'pl' : 'en'}">${u.name}</b> 射程不足`);
         u.actedThisTurn = true; render(); await bsleep(150); continue;
       }
-      const isAI = (u.side === 'enemy') || B.auto;
+      let isAI;
+      if(B.mode === 'free' && B.freeMode === 'hotseat'){
+        isAI = B.auto;
+      } else {
+        isAI = (u.side === 'enemy') || B.auto;
+      }
       if(isAI){
         if(B.tactical){ await tryAIUseTactical(u); }
         await bsleep(300);
@@ -489,6 +520,11 @@ async function runBattle(){
         let target = await waitPlayerTarget(u);
         if(B.over) break;
         if(target && target.__retreat){ continue; }
+        if(target && target.__skip){
+          u.actedThisTurn = true;
+          render(); await bsleep(200);
+          continue;
+        }
         if(target && target.__auto){
           await tryAIUseTactical(u);
           const t2 = aiBattleChoose(u);

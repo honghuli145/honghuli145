@@ -148,7 +148,7 @@ const ELITE_TANKS = {
 };
 const ELITE_PRICES = { 'E-100':3000, 'IS-7':2800, 'T95':2600, '猎虎88':2800, 'T-44/100':2400, 'M26E5':2200 };
 
-const VERSION = '0.4.1';
+const VERSION = '0.4.2';
 const SAVE_KEY = 'tank_campaign_v8';
 const MAP_SAVE_KEY = 'tank_map_v7';
 const TUTORIAL_KEY = 'tank_map_tutorial_v1';

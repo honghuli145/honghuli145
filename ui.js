@@ -27,10 +27,8 @@ function render(){
       if(M.screen === 'battle'){
         const lb = document.getElementById('blog');
         if(lb) lb.scrollTop = lb.scrollHeight;
-        if(B.lastStage !== B.stageIdx){
-          document.documentElement.style.setProperty('--boff', (B.stageIdx * 73) + 'px');
-          B.lastStage = B.stageIdx;
-        }
+        document.documentElement.style.setProperty('--boff', Math.min(B.stageIdx * 3, 12) + 'vh');
+        B.lastStage = B.stageIdx;
       } else {
         document.documentElement.style.setProperty('--boff', '0px');
       }
@@ -43,15 +41,14 @@ function render(){
     freeModeSelect: renderFreeModeSelect, freeSelect: renderFreeSelect,
     guide: renderGuide,
     rogueStart: renderRogueStart, rogueMap: renderRogueMap,
+    changelog: renderChangelog,
   };
   app.innerHTML = (map2[S.screen] || renderMain)();
   if(S.screen === 'battle'){
     const lb = document.getElementById('blog');
     if(lb) lb.scrollTop = lb.scrollHeight;
-    if(B.lastStage !== B.stageIdx){
-      document.documentElement.style.setProperty('--boff', (B.stageIdx * 73) + 'px');
-      B.lastStage = B.stageIdx;
-    }
+    document.documentElement.style.setProperty('--boff', Math.min(B.stageIdx * 3, 12) + 'vh');
+    B.lastStage = B.stageIdx;
   } else {
     document.documentElement.style.setProperty('--boff', '0px');
   }
@@ -66,6 +63,7 @@ function renderMain(){
     <button class="btn rogue-btn" onclick="goRogue()">🎲 远征（Roguelike）</button>
     <button class="btn" onclick="goFreeModeSelect()">🎮 自由模式</button>
     <button class="btn info" onclick="goGuide()">📖 游戏指南</button>
+    <button class="btn" onclick="goChangelog()">📜 更新日志</button>
   </div>
   <div class="ver">v${VERSION}</div>`;
 }
@@ -73,6 +71,50 @@ function goSaveSelect(){ S.screen = 'saveSelect'; M.screen = 'none'; render(); }
 function goFreeModeSelect(){ S.screen = 'freeModeSelect'; M.screen = 'none'; render(); }
 function backMain(){ S.screen = 'main'; M.screen = 'main'; render(); }
 
+// ---------- 更新日志 ----------
+const CHANGELOG = [
+  { v: '0.4.2', date: '2025-10-01', items: [
+    '⚔️ 战斗：手机端双方队伍位移改用 vh 单位，随屏幕自适应不重叠',
+    '⚔️ 战斗：撤退后射程不足时，可直接点「⏭ 跳过本回合」',
+    '⚔️ 战斗：修复蓝方兵牌在有无指令按钮时上下跳动的问题',
+    '⚔️ 战斗：修复推进到近距离时敌方兵牌被遮挡无法点击',
+    '🎮 自由模式：热座模式双方都能操作（红方回合也能开火 / 用指令）',
+    '🎮 自由模式：双方可各自选 2 个战术指令，选人页新增指令入口',
+    '🎮 自由模式：选人页新增「⚙ 设置」入口',
+    '🎲 远征：双面结构（共 30 层），第一面 Lv1→8，第二面 Lv6→15',
+    '🎲 远征：每面第 14 层固定整层篝火，第 15 层 Boss',
+    '🎲 远征：篝火改为三选一（回血 50% / +400 exp / 复活阵亡坦克）',
+    '🎲 远征：新增出战队伍（6 辆）+ 仓库（60）+ 阵亡池（60）',
+    '🎲 远征：被击毁的坦克进入阵亡池，可通过篝火 / 事件 / 商店复活',
+    '🎲 远征：打赢后可从被击毁的敌人中俘获坦克（半血 · 新兵）',
+    '🎲 远征：普通战随机给 1 辆；精英 / Boss 战 3 选 1',
+    '🎲 远征：精英坦克仅在第二面出现（第一面精英节点不出精英）',
+    '🎲 远征：敌人数曲线重做，第一面 1-3 辆（Boss 4），第二面 2-5 辆（Boss 6）',
+    '🎲 远征：新增 4 个难度滑块（等级 / 数量 / 开局 RP / 奖励倍率），存本地',
+    '🎲 远征：事件池扩展到 11 个，新增「英灵殿」复活事件',
+    '🎲 远征：商店新增复活券，移除单辆修理',
+    '🎲 远征：新增「💾 暂离」，可保存进度下次继续',
+    '🎲 远征：地图连线优化，按索引邻近生成 + 贝塞尔曲线，不跨节点',
+    '🎲 远征：地图高度与滚动修复，可见范围扩大到 6-7 层',
+    '🎲 远征：地图页新增「⚙ 设置」入口',
+    '🖥 主菜单新增「📜 更新日志」入口',
+  ]},
+];
+function goChangelog(){ S.screen = 'changelog'; M.screen = 'none'; render(); }
+function renderChangelog(){
+  let html = `<h1>📜 更新日志</h1>
+  <div class="sub">按版本倒序</div>
+  <div class="guide-content" style="max-height:65vh">`;
+  for(const log of CHANGELOG){
+    html += `<h3 style="color:#c86bff;border-bottom:1px solid #2a4a2a;padding-bottom:4px">v${log.v} <span style="font-size:11px;color:#8ab88a;font-weight:400;margin-left:8px">${log.date}</span></h3>
+      <ul>${log.items.map(it => `<li>${esc(it)}</li>`).join('')}</ul>`;
+  }
+  html += `</div>
+  <div class="btns" style="margin-top:auto"><button class="btn" onclick="backMain()">← 返回主菜单</button></div>`;
+  return html;
+}
+
+// ---------- 战役引导 ----------
 function showCampaignTutorial(){
   if(localStorage.getItem(CAMP_TUTORIAL_KEY)) return;
   if(document.querySelector('.tutor-modal')) return;
@@ -101,6 +143,7 @@ function closeCampTutorial(setFlag){
   if(!setFlag) goGuide();
 }
 
+// ---------- 游戏指南 ----------
 const GUIDE_CHAPTERS = [
   { id: 'basics', title: '基础规则', icon: '📖', content: `
 <h3>坦克的 5 项属性</h3>
@@ -141,9 +184,10 @@ const GUIDE_CHAPTERS = [
 <li>装甲 / 速度 / 活度：每星 +4%</li></ul>
 <h3>车组池</h3>
 <p>可主动从坦克上取下车组放入池子，再装入别的坦克（降 1 星）。也可卖出换 RP。</p>`},
-  { id: 'modes', title: '三种模式', icon: '🎮', content: `
+  { id: 'modes', title: '四种模式', icon: '🎮', content: `
 <h3>⚔ 战役模式</h3><p>30 关线性，攒研发点开科技树。</p>
 <h3>🗺 地区模式</h3><p>每个存档可包含多个战役（国家 + 地图自由组合）。</p>
+<h3>🎲 远征模式</h3><p>Roguelike，15 层分支路线，全灭即失败。</p>
 <h3>🎮 自由模式</h3><p>全解锁沙盒，支持重复坦克。</p>`},
   { id: 'map', title: '地区模式', icon: '🗺️', content: `
 <h3>胜利条件</h3>
@@ -239,6 +283,7 @@ function updateDamageCalc(){
     随机范围(±10%)：<b style="color:#ffd76e">${minD} ~ ${maxD}</b>`;
 }
 
+// ---------- 战役存档 ----------
 function renderSaveSelect(){
   let html = `<h1>选择存档</h1><div class="sub">3 个独立存档位</div><div class="saves">`;
   for(let i=0;i<3;i++){
@@ -383,6 +428,7 @@ function renderNationSelect(){
 function pickNation(n){ S.nation = n; SAVES[S.saveIndex].lastNation = n; persistSaves(); S.screen = 'base'; S.baseTab = 'base'; S.compareA = null; S.compareB = null; render(); }
 function goNationSelect(){ S.screen = 'nationSelect'; render(); }
 
+// ---------- 自由模式 ----------
 function renderFreeModeSelect(){
   return `<h1>🎮 自由模式</h1><div class="sub">全解锁 · 支持重复</div>
   <div class="btns">
@@ -391,8 +437,24 @@ function renderFreeModeSelect(){
     <button class="btn" onclick="backMain()">← 主菜单</button>
   </div>`;
 }
-function goFreeHotseat(){ F.mode = 'hotseat'; F.team = { p: [], e: [] }; F.side = 'p'; F.expanded = {}; S.screen = 'freeSelect'; M.screen = 'none'; render(); }
-function goFreeAI(){ F.mode = 'ai'; F.team = { p: [], e: [] }; F.side = 'p'; F.expanded = {}; S.screen = 'freeSelect'; M.screen = 'none'; render(); }
+function goFreeHotseat(){
+  F.mode = 'hotseat';
+  F.team = { p: [], e: [] };
+  F.side = 'p';
+  F.expanded = {};
+  F.pTacs = ['volley','smoke'];
+  F.eTacs = ['apround','repair'];
+  S.screen = 'freeSelect'; M.screen = 'none'; render();
+}
+function goFreeAI(){
+  F.mode = 'ai';
+  F.team = { p: [], e: [] };
+  F.side = 'p';
+  F.expanded = {};
+  F.pTacs = ['volley','smoke'];
+  F.eTacs = ['apround','repair'];
+  S.screen = 'freeSelect'; M.screen = 'none'; render();
+}
 function renderFreeSelect(){
   const P = F.team.p, E = F.team.e;
   const curTeam = F.side === 'p' ? P : E;
@@ -416,9 +478,18 @@ function renderFreeSelect(){
   html += `<div class="panel"><h3>${F.side === 'p' ? '🔵 蓝方' : '🔴 红方'}已选 (${curTeam.length}/6)</h3>
     ${curTeam.length ? `<div class="tank-list">${curTeam.map((n, i) => `<div class="tank-chip sel" onclick="removeFreeTank(${i})">${TY_ICON[TANKS[n].ty]}${esc(n)} ×</div>`).join('')}</div>` : '<div style="color:#5a6a5a;font-size:12px">点击上方加入</div>'}
   </div>`;
+  const pTacStr = (F.pTacs || []).map(id => { const t = TACTICALS.find(x => x.id === id); return t ? t.name : '?'; }).join(' · ') || '无';
+  const eTacStr = (F.eTacs || []).map(id => { const t = TACTICALS.find(x => x.id === id); return t ? t.name : '?'; }).join(' · ') || '无';
+  html += `<div class="panel"><h3>🎯 指令</h3>
+    <div class="row" style="gap:6px">
+      <button class="btn ghost" style="flex:1" onclick="openFreeTacSelect('p')">🔵 蓝方 (${(F.pTacs || []).length}/2)<br><span style="font-size:10px;opacity:.75">${pTacStr}</span></button>
+      ${!isAI ? `<button class="btn ghost" style="flex:1" onclick="openFreeTacSelect('e')">🔴 红方 (${(F.eTacs || []).length}/2)<br><span style="font-size:10px;opacity:.75">${eTacStr}</span></button>` : ''}
+    </div>
+  </div>`;
   html += `<div class="btns" style="margin-top:auto">
     <button class="btn pri" onclick="startFreeBattle()" ${(P.length && (isAI || E.length)) ? '' : 'disabled'}>开始战斗</button>
     ${!isAI ? `<button class="btn" onclick="clearFreeTeam()">清空</button>` : ''}
+    <button class="btn ghost" onclick="openFreeSettings()">⚙ 设置</button>
     <button class="btn" onclick="goFreeModeSelect()">← 切换模式</button>
     <button class="btn" onclick="backMain()">← 主菜单</button>
   </div>`;
@@ -458,7 +529,9 @@ function startFreeBattle(){
   B.retreatUsedThisTurn = false; B.retreatSelect = false; B.retreatPicked = [];
   B.auto = AUTO_BATTLE_CONTINUOUS;
   initBattleBuffs();
-  B.tactical = { playerEquipped: ['volley','smoke'], playerUsed: [], enemyEquipped: [], enemyUsed: [] };
+  const pTacs = (F.pTacs || ['volley','smoke']).slice(0, 2);
+  const eTacs = isAI ? ['apround','repair'] : (F.eTacs || ['apround','repair']).slice(0, 2);
+  B.tactical = { playerEquipped: pTacs, playerUsed: [], enemyEquipped: eTacs, enemyUsed: [] };
   P.forEach((n, i) => B.units.push(makeBattleUnit(n, 'player', i)));
   E.forEach((n, i) => B.units.push(makeBattleUnit(n, 'enemy', i)));
   addBLog(`<span class="rd">⚔ 自由对战 · 蓝 ${P.length} vs 红 ${E.length}${isAI ? '（AI）' : ''}${AUTO_BATTLE_CONTINUOUS?' · 自动':''}</span>`);
@@ -468,3 +541,68 @@ function startFreeBattle(){
 }
 function freeRestart(){ document.getElementById('battleResult')?.remove(); startFreeBattle(); }
 function backToFreeSelect(){ document.querySelectorAll('.res-modal,.diff-modal,.detail,.cm-modal,.tk-detail-modal').forEach(el => el.remove()); S.screen = 'freeSelect'; M.screen = 'none'; document.documentElement.style.setProperty('--boff', '0px'); render(); }
+function openFreeTacSelect(side){
+  document.querySelectorAll('.free-tac-modal').forEach(el => el.remove());
+  const arr = side === 'p' ? (F.pTacs || []) : (F.eTacs || []);
+  const div = document.createElement('div');
+  div.className = 'cm-modal free-tac-modal';
+  div.onclick = e => { if(e.target === div) div.remove(); };
+  const cards = TACTICALS.map(t => {
+    const isEq = arr.includes(t.id);
+    const cls = ['tac-card'];
+    if(isEq) cls.push('active');
+    return `<div class="${cls.join(' ')}" onclick="toggleFreeTac('${side}','${t.id}')">
+      <div class="tc-tier t${t.tier}">T${t.tier}</div>
+      <div class="tc-name">${t.icon} ${t.name}${isEq?' ✓':''}</div>
+      <div class="tc-desc">${t.desc}</div>
+    </div>`;
+  }).join('');
+  div.innerHTML = `<div class="cm-card-wrap">
+    <h3>🎯 ${side === 'p' ? '🔵 蓝方' : '🔴 红方'} 指令 · ${arr.length}/2</h3>
+    <div style="font-size:11px;color:#8ab88a;margin-bottom:8px">选择 2 个指令，战斗中每辆坦克每回合可用 1 个</div>
+    <div class="tac-grid">${cards}</div>
+    <button class="btn" style="width:100%;margin-top:12px" onclick="this.closest('.cm-modal').remove()">关闭</button>
+  </div>`;
+  document.body.appendChild(div);
+}
+function toggleFreeTac(side, id){
+  const arr = side === 'p' ? (F.pTacs = F.pTacs || []) : (F.eTacs = F.eTacs || []);
+  const idx = arr.indexOf(id);
+  if(idx >= 0) arr.splice(idx, 1);
+  else {
+    if(arr.length >= 2){ toast('最多 2 个'); return; }
+    arr.push(id);
+  }
+  openFreeTacSelect(side);
+  render();
+}
+function openFreeSettings(){
+  document.querySelectorAll('.free-set-modal').forEach(el => el.remove());
+  const div = document.createElement('div');
+  div.className = 'cm-modal free-set-modal';
+  div.onclick = e => { if(e.target === div) div.remove(); };
+  const vp = Math.round(SFX.volume * 100);
+  div.innerHTML = `<div class="cm-card-wrap">
+    <h3>⚙ 设置</h3>
+    <div class="settings-row"><span class="lbl">音效</span><div class="toggle ${SFX.enabled?'on':''}" onclick="freeToggleSfx(this)"></div></div>
+    <div class="settings-row"><span class="lbl">音量</span><input type="range" class="vol-slider" min="0" max="100" value="${vp}" oninput="setSfxVolume(this.value)" ${SFX.enabled?'':'disabled'}><span class="vol-val" id="volVal">${vp}%</span></div>
+    <div class="settings-row"><span class="lbl">战斗倍速</span><div class="toggle ${BATTLE_SPEED?'on':''}" onclick="freeToggleSpeed(this)"></div></div>
+    <div class="settings-row"><span class="lbl">战斗自动</span><div class="toggle ${AUTO_BATTLE_CONTINUOUS?'on':''}" onclick="freeToggleAuto(this)"></div></div>
+    <button class="btn" style="width:100%;margin-top:12px" onclick="this.closest('.cm-modal').remove()">关闭</button>
+  </div>`;
+  document.body.appendChild(div);
+}
+function freeToggleSfx(el){
+  if(!SFX.enabled){ SFX.init(); SFX.resume(); SFX.enabled = true; SFX.click(); }
+  else SFX.enabled = false;
+  saveSettings();
+  if(el) el.classList.toggle('on', SFX.enabled);
+}
+function freeToggleSpeed(el){
+  BATTLE_SPEED = !BATTLE_SPEED; saveSettings();
+  if(el) el.classList.toggle('on', BATTLE_SPEED);
+}
+function freeToggleAuto(el){
+  AUTO_BATTLE_CONTINUOUS = !AUTO_BATTLE_CONTINUOUS; saveSettings();
+  if(el) el.classList.toggle('on', AUTO_BATTLE_CONTINUOUS);
+}

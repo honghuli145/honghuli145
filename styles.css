@@ -105,8 +105,10 @@ h1{font-size:20px;font-weight:800;text-align:center;color:#7bff7b;letter-spacing
 .vol-val{font-size:12px;color:#8ab88a;font-variant-numeric:tabular-nums;min-width:36px;text-align:right}
 .bwrap{flex:1;display:flex;flex-direction:column;gap:4px;min-height:0}
 .bteam{display:flex;gap:3px;justify-content:center;flex:0 0 auto}
-.bteam-top{transform:translateY(var(--boff,0));transition:transform .7s cubic-bezier(.4,0,.2,1)}
-.bteam-bot{transform:translateY(calc(var(--boff,0) * -1));transition:transform .7s cubic-bezier(.4,0,.2,1)}
+.bteam-top{transform:translateY(var(--boff,0));transition:transform .7s cubic-bezier(.4,0,.2,1);position:relative;z-index:2;pointer-events:none}
+.bteam-top > *{pointer-events:auto}
+.bteam-bot{transform:translateY(calc(var(--boff,0) * -1));transition:transform .7s cubic-bezier(.4,0,.2,1);position:relative;z-index:2;pointer-events:none}
+.bteam-bot > *{pointer-events:auto}
 .bunit{flex:1;max-width:105px;padding:4px 2px;border-radius:8px;border:2px solid transparent;text-align:center;cursor:pointer;position:relative;font-size:10px}
 .bunit.player{border-color:rgba(74,255,74,.5);background:rgba(77,255,123,.08)}
 .bunit.enemy{border-color:rgba(255,107,107,.5);background:rgba(255,107,107,.08)}
@@ -126,13 +128,14 @@ h1{font-size:20px;font-weight:800;text-align:center;color:#7bff7b;letter-spacing
 .bunit.dead .bact-mark{display:none}
 .bdist{text-align:center;font-size:11px;color:#7a9a7a;padding:3px 0;padding-right:56px;background:rgba(0,0,0,.2);border-radius:5px;flex:0 0 auto;position:relative;min-height:34px}
 .bdist b{color:#7bff7b}
-.speed-stack{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px}
+.speed-stack{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px;z-index:10}
 .speed-btn{background:rgba(0,0,0,.4);border:1.5px solid #2a4a2a;color:#8ab88a;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.5;white-space:nowrap}
 .speed-btn.on{border-color:#ffd76e;color:#ffd76e;background:rgba(255,215,110,.15)}
 .bbanner{text-align:center;padding:3px;border-radius:5px;font-size:11px;font-weight:700;flex:0 0 auto}
 .bbanner.p{background:rgba(74,255,74,.14);color:#9cff9c}
 .bbanner.e{background:rgba(255,107,107,.14);color:#ff9c9c}
 .bbanner.done{background:rgba(255,215,110,.14);color:#ffd76e}
+.bbanner-slot{min-height:24px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 #blog{flex:1;min-height:50px;overflow-y:auto;background:rgba(0,0,0,.3);border-radius:7px;padding:5px 8px;font-size:11px;line-height:1.7}
 #blog b.pl{color:#7bff7b}#blog b.en{color:#ff8080}
 #blog .dmg{color:#ffd76e;font-weight:800}
@@ -148,7 +151,7 @@ h1{font-size:20px;font-weight:800;text-align:center;color:#7bff7b;letter-spacing
 #blog .oneshot{background:rgba(255,80,80,.15);border-left:3px solid #ff5050;padding:3px 6px;border-radius:4px;margin:2px 0;font-weight:900;color:#ffaaaa}
 #blog .tac{background:rgba(255,215,110,.12);border-left:3px solid #ffd76e;padding:3px 6px;border-radius:4px;margin:3px 0;font-weight:700;color:#ffd76e}
 .stat-mvp{background:rgba(255,215,110,.08);border:1.5px solid rgba(255,215,110,.3);border-radius:10px;padding:10px 12px}
-#tacticalBar{display:flex;gap:5px;justify-content:center;flex:0 0 auto;padding:6px 0;min-height:46px;align-items:center;position:relative}
+#tacticalBar{display:flex;gap:5px;justify-content:center;flex:0 0 auto;padding:6px 0;height:58px;align-items:center;position:relative;overflow:visible}
 .tbtn{padding:8px 14px;border-radius:8px;border:1.5px solid #2a4a2a;background:rgba(0,0,0,.4);color:#c8e8c8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;position:relative;transition:.15s}
 .tbtn:active{transform:scale(.96)}
 .tbtn.used{opacity:.3;cursor:not-allowed;text-decoration:line-through}
@@ -159,6 +162,11 @@ h1{font-size:20px;font-weight:800;text-align:center;color:#7bff7b;letter-spacing
 .tbtn.tier-1 .ttier{background:#4dd0ff;color:#001a22}
 .tbtn.tier-2 .ttier{background:#c86bff;color:#1a0022}
 .tbtn.tier-3 .ttier{background:#ff6b6b;color:#1a0000}
+.tbtn.retreat-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);margin-left:0;border-color:#5a6a7a;color:#a8c8e8;background:rgba(0,0,0,.4)}
+.tbtn.retreat-btn:hover{border-color:#4dd0ff}
+.tbtn.retreat-btn:active{transform:translateY(-50%) scale(.96)}
+.tbtn.retreat-btn.active{border-color:#ff6b6b;color:#ff9c9c}
+.bunit.retreat-picked{opacity:.5;border-color:#a8c8e8!important;box-shadow:0 0 8px rgba(168,200,232,.6)}
 #bact{display:flex;flex-direction:column;gap:4px;height:88px;overflow-y:auto;flex:0 0 auto}
 .bhint{text-align:center;font-size:11px;color:#7a9a7a;padding:4px}
 .bdl{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
@@ -320,14 +328,6 @@ h1{font-size:20px;font-weight:800;text-align:center;color:#7bff7b;letter-spacing
 .tk-detail-stats .row b{color:#ffd76e;font-weight:800}
 .tk-detail-stats .row b .vet{color:#7bff7b;font-size:11px;margin-left:6px;font-weight:700}
 
-/* 撤退按钮：绝对定位到战术栏右侧 */
-#tacticalBar{position:relative}
-.tbtn.retreat-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);margin-left:0;border-color:#5a6a7a;color:#a8c8e8;background:rgba(0,0,0,.4)}
-.tbtn.retreat-btn:hover{border-color:#4dd0ff}
-.tbtn.retreat-btn:active{transform:translateY(-50%) scale(.96)}
-.tbtn.retreat-btn.active{border-color:#ff6b6b;color:#ff9c9c}
-.bunit.retreat-picked{opacity:.5;border-color:#a8c8e8!important;box-shadow:0 0 8px rgba(168,200,232,.6)}
-
 /* ===== 经验条 ===== */
 .tank-chip .exp-bar{display:block;height:3px;background:#1a2a1a;border-radius:2px;margin-top:3px;overflow:hidden;min-width:36px}
 .tank-chip .exp-bar i{display:block;height:100%;background:linear-gradient(90deg,#ffd76e,#ff9d4d);transition:width .3s}
@@ -340,7 +340,7 @@ h1{font-size:20px;font-weight:800;text-align:center;color:#7bff7b;letter-spacing
 .tk-detail-card .exp-bar i{display:block;height:100%;background:linear-gradient(90deg,#ffd76e,#ff9d4d);transition:width .3s}
 .tk-detail-card .exp-bar.full i{background:linear-gradient(90deg,#ffd76e,#7bff7b)}
 
-/* ===== 主菜单版本号（大、亮） ===== */
+/* ===== 主菜单版本号 ===== */
 .ver{
   position:fixed;
   bottom:calc(18px + env(safe-area-inset-bottom));
@@ -381,65 +381,6 @@ h1{font-size:20px;font-weight:800;text-align:center;color:#7bff7b;letter-spacing
 .tank-name[data-star="2"]{color:#c86bff}
 .tank-name[data-star="3"]{color:#ffd76e;text-shadow:0 0 4px rgba(255,215,110,.55)}
 
-/* ===== 远征模式 ===== */
-.btn.rogue-btn{background:linear-gradient(180deg,#c86bff,#7a3fb8);border-color:#c86bff;color:#fff}
-
-.rogue-hud{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:8px 12px;margin-bottom:6px;
-  background:linear-gradient(160deg,rgba(200,107,255,.15),rgba(0,0,0,0));
-  border:1.5px solid #5a3a8a;border-radius:10px;
-  font-size:12px;flex-wrap:wrap;gap:6px;
-}
-.rogue-hud b{color:#ffd76e}
-
-.rogue-map-wrap{
-  overflow-y:auto;overflow-x:hidden;
-  background:rgba(0,0,0,.35);
-  position:relative;
-  -webkit-overflow-scrolling:touch;
-}
-
-.rogue-node{
-  position:absolute;
-  border-radius:12px;
-  border:2px solid #2a4a2a;
-  background:#1a2e1a;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  transition:.15s;
-  z-index:2;
-  color:#e0e8e0;
-  user-select:none;
-}
-.rogue-node .rn-icon{font-size:18px;line-height:1}
-.rogue-node .rn-label{font-size:9px;color:#8ab88a;margin-top:2px;font-weight:700}
-.rogue-node.battle{border-color:#2a4a2a}
-.rogue-node.elite{border-color:#ff6b6b;background:rgba(255,107,107,.15)}
-.rogue-node.elite .rn-label{color:#ff9c9c}
-.rogue-node.boss{border-color:#c86bff;background:rgba(200,107,255,.2)}
-.rogue-node.boss .rn-label{color:#d9a3ff}
-.rogue-node.start{border-color:#7bff7b;background:rgba(77,255,123,.2)}
-.rogue-node.start .rn-label{color:#9cff9c}
-.rogue-node.visited{opacity:.55}
-.rogue-node.current{
-  border-color:#ffd76e;background:rgba(255,215,110,.22);
-  box-shadow:0 0 16px rgba(255,215,110,.8);
-  transform:scale(1.1);
-  opacity:1;
-}
-.rogue-node.available{
-  border-color:#4dd0ff;background:rgba(77,208,255,.15);
-  animation:roguePulse 1.4s infinite;
-}
-.rogue-node.available .rn-label{color:#9cd4ff}
-@keyframes roguePulse{
-  0%,100%{box-shadow:0 0 6px rgba(77,208,255,.5)}
-  50%{box-shadow:0 0 18px rgba(77,208,255,.9)}
-}
 /* ===== 远征模式 ===== */
 .btn.rogue-btn{background:linear-gradient(180deg,#c86bff,#7a3fb8);border-color:#c86bff;color:#fff}
 
@@ -556,16 +497,34 @@ h1{font-size:20px;font-weight:800;text-align:center;color:#7bff7b;letter-spacing
 .shop-item .shop-tag{font-size:11px;color:#5a6a5a;padding:4px 10px;border-radius:6px;border:1px dashed #2a4a2a}
 .shop-item .btn.sm{padding:6px 12px;font-size:12px}
 
-/* ===== 篝火 ===== */
-.rest-choices{display:flex;flex-direction:column;gap:10px}
-.rest-choice{padding:16px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
-.rest-choice:hover{border-color:#4dff7b}
-.rest-choice .rc-icon{font-size:26px;line-height:1}
-.rest-choice .rc-name{font-size:14px;font-weight:800;color:#9cff9c}
-.rest-choice .rc-desc{font-size:11px;color:#8ab88a;font-weight:500}
-
 /* ===== 事件 ===== */
 .event-choices{display:flex;flex-direction:column;gap:8px}
 .event-choice{padding:12px;text-align:left;font-size:13px;line-height:1.5}
 .event-choice:not(:disabled):hover{border-color:#4dff7b}
 .event-choice:disabled{opacity:.45;cursor:not-allowed}
+
+/* ===== 远征：编队弹窗 ===== */
+.rogue-team-section{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #1a2a1a}
+.rogue-team-section:last-child{border-bottom:none;padding-bottom:0;margin-bottom:0}
+.rogue-team-section h4{font-size:12px;color:#8ab88a;margin-bottom:6px;font-weight:700}
+.rogue-team-section .empty-hint{font-size:11px;color:#5a6a5a;padding:4px 0}
+
+/* ===== 篝火：三选一 ===== */
+.rest-choices{display:flex;flex-direction:column;gap:10px}
+.rest-choice{padding:14px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.rest-choice:hover{border-color:#4dff7b}
+.rest-choice:disabled{opacity:.4;cursor:not-allowed}
+.rest-choice .rc-icon{font-size:24px;line-height:1}
+.rest-choice .rc-name{font-size:14px;font-weight:800;color:#9cff9c}
+.rest-choice .rc-desc{font-size:11px;color:#8ab88a;font-weight:500}
+
+/* ===== 第二面入场提示 ===== */
+.phase2-banner{
+  text-align:center;padding:10px;border-radius:10px;
+  background:linear-gradient(160deg,rgba(200,107,255,.2),rgba(200,107,255,.05));
+  border:1.5px solid #c86bff;color:#d9a3ff;font-weight:800;font-size:14px;
+  letter-spacing:2px;margin-bottom:8px;
+}
+
+/* ===== 战斗：位移不挡点击 ===== */
+.bdist, .bbanner-slot, #blog{position:relative;z-index:1}
