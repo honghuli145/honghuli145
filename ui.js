@@ -254,22 +254,15 @@ function updateDamageCalc(){
   const fp = +document.getElementById('dcFP').value || 1;
   const dist = +document.getElementById('dcDist').value || 0;
   const heat = document.getElementById('dcHeat').checked;
-  const effPen = heat ? pen : pen * (1 - 0.15 * dist);
-  const diff = armor - effPen;
-  let mul;
-  if(fp <= 50) mul = diff <= 0 ? 1 : diff <= 5 ? 0.5 : diff <= 10 ? 0.25 : 0.125;
-  else mul = diff <= 0 ? 1 : diff <= 10 ? 0.5 : diff <= 20 ? 0.25 : 0.125;
-  const dmgBase = Math.max(1, Math.round(atk * mul));
-  const epBase = heat ? pen : pen * (1 - 0.15 * dist);
+  const base = damageCore({ at: atk, p: pen, fp, heat, km: dist, armor });
+  const effPen = base.effPen;
+  const diff = base.diff;
+  const mul = base.mul;
+  const dmgBase = base.dmg;
   let minD = Infinity, maxD = 0;
   for(const aMul of [0.9, 1.1]){
     for(const pMul of [0.9, 1.1]){
-      const ep = epBase * pMul;
-      const df = armor - ep;
-      let m;
-      if(fp <= 50) m = df <= 0 ? 1 : df <= 5 ? 0.5 : df <= 10 ? 0.25 : 0.125;
-      else m = df <= 0 ? 1 : df <= 10 ? 0.5 : df <= 20 ? 0.25 : 0.125;
-      const d = Math.max(1, Math.round(atk * aMul * m));
+      const d = damageCore({ at: atk, p: pen, fp, heat, km: dist, armor, atkMul: aMul, penMul: pMul }).dmg;
       if(d < minD) minD = d;
       if(d > maxD) maxD = d;
     }
@@ -521,13 +514,7 @@ function startFreeBattle(){
   const isAI = F.mode === 'ai'; const P = F.team.p; let E = F.team.e;
   if(isAI){ if(P.length === 0){ toast('请先选蓝方'); return; } E = generateFreeAITeam(P); }
   else { if(P.length === 0 || E.length === 0){ toast('双方都需至少 1 辆'); return; } }
-  B.units = []; B.log = []; B.stats = {}; B.round = 0; B.stageIdx = 0; B.ccRound = 0;
-  B.cur = null; B.await = null; B.resolve = null; B.over = false;
-  B.result = null; B.difficulty = 'normal'; B.uid = 0;
-  B.mode = 'free'; B.freeMode = isAI ? 'ai' : 'hotseat'; B.earned = 0; B.lastStage = -1; B.mapCtx = null; B.aiCallback = null;
-  B.perfect = false; B.isFirstClear = false; B._veteranResult = null;
-  B.retreatUsedThisTurn = false; B.retreatSelect = false; B.retreatPicked = [];
-  B.auto = AUTO_BATTLE_CONTINUOUS;
+  resetBattleState('free'); B.freeMode = isAI ? 'ai' : 'hotseat';
   initBattleBuffs();
   const pTacs = (F.pTacs || ['volley','smoke']).slice(0, 2);
   const eTacs = isAI ? ['apround','repair'] : (F.eTacs || ['apround','repair']).slice(0, 2);

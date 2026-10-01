@@ -26,3 +26,14 @@ const B = { units: [], log: [], stats: {}, round: 0, stageIdx: 0, ccRound: 0, cu
 const M = { screen: 'main', saveIndex: -1, gameIdx: 0, nation: '德', pendingNation: null, selectedUnit: null, moveMode: null, undoStack: [], lastClick: { id: -1, time: 0 }, selectedBaseTab: 'base', editingUnitId: null };
 let BATTLE_SPEED = false;
 let AUTO_BATTLE_CONTINUOUS = false;
+
+function resetBattleState(mode, difficulty){
+  difficulty = difficulty || 'normal';
+  B.units = []; B.log = []; B.stats = {}; B.round = 0; B.stageIdx = 0; B.ccRound = 0;
+  B.cur = null; B.await = null; B.resolve = null; B.over = false;
+  B.result = null; B.difficulty = difficulty; B.uid = 0;
+  B.mode = mode; B.earned = 0; B.lastStage = -1; B.mapCtx = null; B.aiCallback = null;
+  B.perfect = false; B.isFirstClear = false; B._veteranResult = null;
+  B.retreatUsedThisTurn = false; B.retreatSelect = false; B.retreatPicked = [];
+  B.auto = AUTO_BATTLE_CONTINUOUS; B.buffs = null; B.tactical = null;
+}
