@@ -1099,13 +1099,7 @@ function startRogueBattle(nodeId){
   if(RG.active.length === 0){ toast('没有出战坦克'); return; }
   const enNames = generateRogueEnemyTeam(node.layer, node.type);
 
-  B.units = []; B.log = []; B.stats = {}; B.round = 0; B.stageIdx = 0; B.ccRound = 0;
-  B.cur = null; B.await = null; B.resolve = null; B.over = false;
-  B.result = null; B.difficulty = 'normal'; B.uid = 0;
-  B.mode = 'rogue'; B.earned = 0; B.lastStage = -1; B.mapCtx = null; B.aiCallback = null;
-  B.perfect = false; B.isFirstClear = false; B._veteranResult = null;
-  B.retreatUsedThisTurn = false; B.retreatSelect = false; B.retreatPicked = [];
-  B.auto = AUTO_BATTLE_CONTINUOUS;
+  resetBattleState('rogue');
   initBattleBuffs();
   B.tactical = { playerEquipped: RG.tacEquipped.slice(0, 2), playerUsed: [], enemyEquipped: [], enemyUsed: [] };
   setupAITacticalPool(node.type === 'boss' ? 2 : node.type === 'elite' ? 1 : 0);

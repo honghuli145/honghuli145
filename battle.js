@@ -717,13 +717,7 @@ function startBattle(diff){
   const cur = getCur(); const pn = cur.lineup.map(i => cur.tank[i].n);
   const cached = window._diffTeams && window._diffTeams[diff];
   const en = cached || generateEnemyTeam(cur.chapter, diff); window._diffTeams = null;
-  B.units = []; B.log = []; B.stats = {}; B.round = 0; B.stageIdx = 0; B.ccRound = 0;
-  B.cur = null; B.await = null; B.resolve = null; B.over = false;
-  B.result = null; B.difficulty = diff; B.uid = 0;
-  B.mode = 'campaign'; B.earned = 0; B.lastStage = -1; B.mapCtx = null; B.aiCallback = null;
-  B.perfect = false; B.isFirstClear = false; B._veteranResult = null;
-  B.retreatUsedThisTurn = false; B.retreatSelect = false; B.retreatPicked = [];
-  B.auto = AUTO_BATTLE_CONTINUOUS;
+  resetBattleState('campaign', diff);
   initBattleBuffs();
   const playerEq = cur.chapter >= 6 ? (cur.tacEquipped || []).slice(0, cur.tacSlots || 0) : [];
   B.tactical = { playerEquipped: playerEq, playerUsed: [], enemyEquipped: [], enemyUsed: [] };

@@ -617,12 +617,8 @@ function showCodexDetail(name){
 }
 
 function renderSettings(){
-  const vp = Math.round(SFX.volume * 100);
   return `<div class="panel"><h3>⚙️ 设置</h3>
-    <div class="settings-row"><span class="lbl">音效</span><div class="toggle ${SFX.enabled?'on':''}" onclick="toggleSfx()"></div></div>
-    <div class="settings-row"><span class="lbl">音量</span><input type="range" class="vol-slider" min="0" max="100" value="${vp}" oninput="setSfxVolume(this.value)" ${SFX.enabled?'':'disabled'}><span class="vol-val" id="volVal">${vp}%</span></div>
-    <div class="settings-row"><span class="lbl">战斗倍速（跨战斗）</span><div class="toggle ${BATTLE_SPEED?'on':''}" onclick="toggleBattleSpeed()"></div></div>
-    <div class="settings-row"><span class="lbl">战斗自动（跨战斗）</span><div class="toggle ${AUTO_BATTLE_CONTINUOUS?'on':''}" onclick="toggleAutoContinuous()"></div></div>
+  ${settingsRowsHTML()}
   </div>
   <div class="btns" style="margin-top:auto"><button class="btn" onclick="setTab('base')">← 返回基地</button></div>`;
 }
