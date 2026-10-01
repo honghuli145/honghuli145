@@ -354,7 +354,7 @@ function unitStarRange(u){
 function renderHpBar(u){
   const pct = Math.round(unitHpPct(u) * 100);
   const cls = pct < 30 ? 'low' : pct < 70 ? 'mid' : '';
-  return `<div class="mini-hp ${cls}"><i style="width:${pct}%"></i></div>`;
+  return barHTML(pct, 'mini-hp' + (cls ? ' '+cls : ''));
 }
 function renderMapCell(id, sv){
   const cell = sv.cells[id]; const owner = cell.owner;
@@ -949,11 +949,10 @@ function renderMapBase(){
         const isE = !!ELITE_TANKS[t.n];
         const exp = t.exp || 0;
         const st = getStar(exp);
-        const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
         const pct = expProgressPct(exp);
         const full = st >= 3 ? ' full' : '';
         const sellBtn = isE ? '' : `<span class="sell" onclick="event.stopPropagation();confirmSellMapTank(${i})">×</span>`;
-        return `<div class="tank-chip" onclick="showTankDetail(true,${i})">${sellBtn}${isE?'⭐':TY_ICON[d.ty]}<span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span><div class="exp-bar${full}"><i style="width:${pct}%"></i></div></div>`;
+        return `<div class="tank-chip" onclick="showTankDetail(true,${i})">${sellBtn}${tankNameHTML(t.n, d.ty, exp, {iconFallback: isE?'⭐':TY_ICON[d.ty]})}${barHTML(pct,'exp-bar',full)}</div>`;
       }).join('')}</div>` : '<div style="color:#5a6a5a;font-size:12px">暂无</div>'}
     </div>`;
     const eliteList = NATION_ELITE[sv.nation] || [];
