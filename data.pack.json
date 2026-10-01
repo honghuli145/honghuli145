@@ -1,0 +1,22 @@
+{
+  "_comment": "外部数据包（模板）。这是空模板 = 不改动任何数据。只填你要覆盖的条目即可；删掉本文件同样回到内置数据。文件放在 index.html 同目录。",
+  "_schema": {
+    "tanks": "数组，按 n（坦克名）覆盖或新增：{n,na,ty,fp,fd,s,p,a,at,ac,heat?}",
+    "trees": "对象，按国家覆盖科技树：{ 德: { '一号A': {lv:1,ch:['一号B']} } }",
+    "mapTemplates": "对象，按地图 key 覆盖模板：{ small: ['..c..','.....'] }",
+    "terrain": "对象，按地形覆盖：{ plain:{mp:1,pass:true,cls:'ter-plain'} }",
+    "tacticals": "数组，按 id 覆盖或新增战术",
+    "commanders": "数组，按 id 覆盖或新增指挥官",
+    "eliteTanks": "对象，按名称覆盖精英坦克",
+    "elitePrices": "对象，按名称覆盖精英价格",
+    "version": "可选，字符串，覆盖显示版本号"
+  },
+  "tanks": [],
+  "trees": {},
+  "mapTemplates": {},
+  "terrain": {},
+  "tacticals": [],
+  "commanders": [],
+  "eliteTanks": {},
+  "elitePrices": {}
+}

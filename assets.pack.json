@@ -1,0 +1,9 @@
+{
+  "_comment": "媒体资源包（模板）。这是空模板 = 不改动任何表现（仍用 emoji 图标 + 合成音效）。把图片/音频放进本目录（或子目录）后在此登记 键→相对路径 即可；删掉本文件同样回到内置表现。",
+  "_schema": {
+    "images": "对象，键→路径。键可为：坦克名（'虎式'）、类型（'light'/'medium'/'heavy'/'td'）、'icon:坦克名'。按 坦克名→类型→icon:名 的顺序查找。",
+    "audio": "对象，键→路径。键：fire / hit / hit:pierce / hit:half / hit:graze / explode / move / tac / win / lose / click / coin / reload / bgm"
+  },
+  "images": {},
+  "audio": {}
+}

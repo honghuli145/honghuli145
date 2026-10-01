@@ -1,0 +1,22 @@
+/* ============================================================
+   assets.css — 媒体资源包样式（坦克图片等）
+   仅在 assets.pack.json 登记了图片时才会出现对应 <img>。
+   ============================================================ */
+
+.tk-img {
+  width: 1.5em; height: 1.5em;
+  vertical-align: -0.35em;
+  object-fit: contain;
+  margin-right: 3px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6));
+}
+
+.tn-img {
+  width: 22px; height: 22px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 1px;
+}
+
+/* 目标列表/图鉴等紧凑行内图片稍微小一点 */
+.bdi .tk-img { width: 1.25em; height: 1.25em; }
