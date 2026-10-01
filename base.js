@@ -21,7 +21,7 @@ function renderBase(){
   </div>`;
   if(S.baseTab === 'base'){
     html += `<div class="panel"><h3>出战编队 (${cur.lineup.length}/${cur.slots})</h3>
-      ${cur.lineup.length ? cur.lineup.map((i)=>{ const t = cur.tank[i]; if(!t) return ''; const st = getStar(t.exp || 0); const stars = st > 0 ? ' ' + '★'.repeat(st) : ''; return `<span class="tank-chip sel"><span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span></span>`; }).join('') : '<div style="color:#5a6a5a;font-size:12px">未设置</div>'}
+      ${cur.lineup.length ? cur.lineup.map((i)=>{ const t = cur.tank[i]; if(!t) return ''; return `<span class="tank-chip sel">${tankNameHTML(t.n, (TANKS[t.n]||{}).ty, t.exp, {icon:false})}</span>`; }).join('') : '<div style="color:#5a6a5a;font-size:12px">未设置</div>'}
     </div>`;
     html += `<div class="panel"><h3>已拥有坦克 (${cur.tank.length}/60) · 点击看详情</h3>${cur.tank.length ? renderTankList() : '<div style="color:#5a6a5a;font-size:12px">暂无</div>'}</div>`;
     html += renderCrewSection(false);
@@ -49,10 +49,9 @@ function renderTankList(){
     const d = TANKS[t.n]; if(!d) return '';
     const exp = t.exp || 0;
     const st = getStar(exp);
-    const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
     const pct = expProgressPct(exp);
     const full = st >= 3 ? ' full' : '';
-    return `<div class="tank-chip" onclick="showTankDetail(false,${i})"><span class="sell" onclick="event.stopPropagation();confirmSell(${i})">×</span>${TY_ICON[d.ty]}<span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span><div class="exp-bar${full}"><i style="width:${pct}%"></i></div></div>`;
+    return `<div class="tank-chip" onclick="showTankDetail(false,${i})"><span class="sell" onclick="event.stopPropagation();confirmSell(${i})">×</span>${tankNameHTML(t.n, d.ty, exp, {iconFallback: TY_ICON[d.ty]})}${barHTML(pct,'exp-bar',full)}</div>`;
   }).join('')}</div>`;
 }
 function confirmSell(i){
@@ -170,9 +169,7 @@ function renderFormation(){
   let html = `<div class="panel"><h3>出战坦克（最多 ${cur.slots}）</h3>
     <div class="tank-list">${cur.tank.map((t,i)=>{ const d = TANKS[t.n]; if(!d) return '';
       const sel = cur.lineup.includes(i);
-      const st = getStar(t.exp || 0);
-      const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
-      return `<div class="tank-chip ${sel?'sel':''}" onclick="toggleLineup(${i})">${TY_ICON[d.ty]}<span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span></div>`;
+      return `<div class="tank-chip ${sel?'sel':''}" onclick="toggleLineup(${i})">${tankNameHTML(t.n, d.ty, t.exp, {iconFallback: TY_ICON[d.ty]})}</div>`;
     }).join('')}</div>
     <div style="font-size:12px;color:#8ab88a;margin-top:8px">已选 ${cur.lineup.length}/${cur.slots}</div></div>
   <div class="panel"><h3>出战槽位</h3><div class="slotbar">`;
@@ -300,7 +297,7 @@ function renderCrewSection(isMap){
       html += `<div class="crew-item">
         <div class="crew-info">
           <div class="crew-name">${stars} ${esc(c.fromTank)} 车组</div>
-          <div class="crew-exp"><span>${c.exp} 经验</span><div class="exp-bar${full}"><i style="width:${pct}%"></i></div></div>
+          <div class="crew-exp"><span>${c.exp} 经验</span>${barHTML(pct,'exp-bar',full)}</div>
         </div>
         <div class="crew-actions">
           <button class="btn ghost sm" onclick="openInstallCrew('${c.id}',${isLargeStr})">装入坦克</button>
@@ -324,7 +321,7 @@ function renderCrewSection(isMap){
       html += `<div class="crew-item">
         <div class="crew-info">
           <div class="crew-name">${stars} ${esc(t.n)}</div>
-          <div class="crew-exp"><span>${t.exp} 经验</span><div class="exp-bar${full}"><i style="width:${pct}%"></i></div></div>
+          <div class="crew-exp"><span>${t.exp} 经验</span>${barHTML(pct,'exp-bar',full)}</div>
         </div>
         <div class="crew-actions">
           <button class="btn ghost sm" onclick="detachCrew(${isLargeStr},${i})">取下车组</button>
@@ -471,7 +468,7 @@ function showTankDetail(isMap, idx){
       ★ 攻击/穿深：浮动区间收窄（期望约 +1%/星）· 速度/装甲/活度：每星 +4%
     </div>
     <div class="btns" style="margin-top:12px">
-      <button class="btn" onclick="this.closest('.tk-detail-modal').remove()">关闭</button>
+      ${closeBtnHTML('.tk-detail-modal')}
     </div>
   </div>`;
   document.body.appendChild(div);
@@ -484,9 +481,7 @@ function renderCompare(){
     ${cur.tank.length < 2 ? '<div class="cmp-tip">至少 2 辆</div>' :
       `<div class="tank-list">${cur.tank.map((t,i)=>{ const d = TANKS[t.n]; if(!d) return '';
         const sel = S.compareA === i || S.compareB === i;
-        const st = getStar(t.exp || 0);
-        const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
-        return `<div class="tank-chip ${sel?'sel':''}" onclick="toggleCompare(${i})">${TY_ICON[d.ty]}<span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span></div>`;
+        return `<div class="tank-chip ${sel?'sel':''}" onclick="toggleCompare(${i})">${tankNameHTML(t.n, d.ty, t.exp, {iconFallback: TY_ICON[d.ty]})}</div>`;
       }).join('')}</div>`}</div>`;
   if(cur.tank.length >= 2 && S.compareA != null && S.compareB != null && cur.tank[S.compareA] && cur.tank[S.compareB]){
     const ta = cur.tank[S.compareA], tb = cur.tank[S.compareB];
@@ -610,7 +605,7 @@ function showCodexDetail(name){
       射程：${rng}${d.heat?'<br>* 破甲弹：穿深不随距离衰减':''}
     </div>
     <div class="btns" style="margin-top:12px">
-      <button class="btn" onclick="this.closest('.tk-detail-modal').remove()">关闭</button>
+      ${closeBtnHTML('.tk-detail-modal')}
     </div>
   </div>`;
   document.body.appendChild(div);

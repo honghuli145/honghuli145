@@ -164,10 +164,9 @@ function renderBUnit(u){
     else if(B.cur === u) actMark = '<span class="bact-mark" style="color:#ffd76e">▶</span>';
   }
   const st = u.star || 0;
-  const starStr = st > 0 ? ' ' + '★'.repeat(st) : '';
   return `<div class="${cls}" data-uid="${u.uid}" onclick="clickBUnit('${u.uid}')">${badge}${actMark}
-    <div class="bnm">${u.icon}<span class="tank-name" data-star="${st}">${u.name}${starStr}</span></div>
-    <div class="bhp"><i style="width:${pct}%"></i></div>
+    <div class="bnm">${tankNameHTML(u.name, u.ty, 0, {iconFallback: u.icon, star: st})}</div>
+    ${barHTML(pct,'bhp')}
     <div class="bnum">${u.hp}/${u.maxHp}</div>
     <div class="bst"><span style="color:#ff8a6b">${u.at}</span><span style="color:#4dd0ff">${u.s}</span><span style="color:#c86bff">${u.p}${u.heat?'*':''}</span><span style="color:#ffb84d">${u.a}</span></div></div>`;
 }
@@ -235,12 +234,11 @@ function showBattleDetail(u){
   const m = document.createElement('div'); m.className = 'detail';
   m.onclick = e => { if(e.target === m) m.remove(); };
   const st = u.star || 0;
-  const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
-  m.innerHTML = `<h3>${u.icon}<span class="tank-name" data-star="${st}">${u.name}${stars}</span> ${TY_CN[u.ty]}</h3>
+  m.innerHTML = `<h3>${tankNameHTML(u.name, u.ty, 0, {iconFallback: u.icon, star: st})} ${TY_CN[u.ty]}</h3>
     <div class="stats"><div><span>火力</span><b>${u.fd}</b></div><div><span>攻击</span><b>${u.at}</b></div>
     <div><span>速度</span><b>${u.s}</b></div><div><span>穿深</span><b>${u.p}${u.heat?'*':''}</b></div>
     <div><span>装甲</span><b>${u.a}</b></div><div><span>活度</span><b>${u.hp}/${u.maxHp}</b></div></div>
-    <div class="acts"><button class="btn" onclick="this.closest('.detail').remove()">关闭</button></div>`;
+    <div class="acts">${closeBtnHTML('.detail')}</div>`;
   document.body.appendChild(m);
 }
 function waitPlayerTarget(u){ return new Promise(r => { B.resolve = r; B.await = 'target'; render(); }); }
