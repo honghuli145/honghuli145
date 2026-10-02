@@ -46,9 +46,40 @@ function renderBattle(){
   let banner = '';
   if(B.over) banner = `<div class="bbanner done">战斗结束</div>`;
   else if(B.cur){ const side = B.cur.side === 'player' ? 'p' : 'e'; banner = `<div class="bbanner ${side}">${B.cur.side === 'player' ? '🔵 蓝方' : '🔴 红方'} · ${B.cur.name}</div>`; }
-  return `<div class="bwrap">
+  let histBar = '';
+  if(B.mode === 'historical' && B.histLevel > 0){
+    const mod = B.modifiers || {};
+    const cfg = (LEVEL_CONFIG[S.nation] || {})[B.histLevel] || {};
+    const wt = cfg.weatherTag || null;
+    const wtIcon = { sand:'🌫️', snow:'❄️', rain:'🌧️', fog:'🌫️', night:'🌙' }[wt] || '';
+    const wtName = { sand:'沙暴', snow:'严寒', rain:'暴雨', fog:'迷雾', night:'夜战' }[wt] || '';
+    const rules = [];
+    if(mod.atkMod) rules.push(`${wtIcon || '⚠'} ${wtName || '修正'} · 攻击 ${mod.atkMod > 0 ? '+' : ''}${Math.round(mod.atkMod * 100)}%`);
+    if(mod.penMod) rules.push(`穿深 ${mod.penMod > 0 ? '+' : ''}${Math.round(mod.penMod * 100)}%`);
+    if(mod.floatRange) rules.push(`🎲 浮动 ±${Math.round(mod.floatRange * 100)}%`);
+    if(mod.initiative === 'player') rules.push('⚡ 我方先手');
+    if(mod.initiative === 'enemy') rules.push('💨 敌方先手');
+    if(mod.startStage === 1) rules.push('📍 开局 2km');
+    if(mod.startStage === 2) rules.push('📍 开局 1km');
+    if(mod.startStage === 3) rules.push('📍 开局 100m');
+    if(mod.noRetreat) rules.push('🚫 无法撤退');
+    if(mod.enemyLvMod > 0) rules.push(`⬆ 敌军 Lv+${mod.enemyLvMod}`);
+    if(mod.enemyLvMod < 0) rules.push(`⬇ 敌军 Lv${mod.enemyLvMod}`);
+    if(mod.enemyCountMul > 1) rules.push(`👥 敌军 ×${mod.enemyCountMul}`);
+    if(mod.maxRounds) rules.push(`⏱ 限时 ${mod.maxRounds} 回合`);
+    const lvName = cfg.name || '';
+    const enemies = [cfg.enemyNation, cfg.enemyNation2, cfg.enemyNation3].filter(Boolean).map(n => NAT_NAME[n]).join(' + ');
+    histBar = `<div class="hist-bar"><span class="hb-title">${wtIcon ? wtIcon + ' ' : ''}📜 ${B.histChapterName || ''} · 第 ${B.histLevel} 关${lvName ? ' · ' + lvName : ''}</span>${enemies ? `<span class="hb-enemy">敌军：${enemies}</span>` : ''}${rules.length ? `<span class="hb-rules">${rules.join(' · ')}</span>` : ''}</div>`;
+  }
+  const mr = B.modifiers && B.modifiers.maxRounds;
+  const remain = mr ? (mr - B.round) : 0;
+  const warnCls = (mr && remain <= 3) ? ' warn' : '';
+  const timeStr = mr ? ` <span class="timer-badge${warnCls}">⏱ ${B.round}/${mr}</span>` : '';
+  const themeCls = (B.modifiers && B.modifiers.theme) ? ' theme-' + B.modifiers.theme : '';
+  return `<div class="bwrap${themeCls}">
+    ${histBar}
     <div class="bteam bteam-top">${en.map(renderBUnit).join('')}</div>
-    <div class="bdist">📍 <b>${stg.n}</b>${B.stageIdx === 4 ? ` · 近身${B.ccRound}` : ''}
+    <div class="bdist">📍 <b>${stg.n}</b>${B.stageIdx === 4 ? ` · 近身${B.ccRound}` : ''}${timeStr}
       <div class="speed-stack">
         <button class="speed-btn ${BATTLE_SPEED?'on':''}" onclick="toggleBattleSpeed()">${BATTLE_SPEED?'⏩3×':'⏩1×'}</button>
         <button class="speed-btn ${B.auto?'on':''}" onclick="toggleAuto()">${B.auto?'⏹停止':'🤖自动'}</button>
@@ -66,6 +97,7 @@ function getRetreatNeeded(){ return Math.floor(getAlivePlayerUnits().length / 2)
 function getRetreatEligible(){ return getAlivePlayerUnits().filter(u => !u.actedThisTurn); }
 function canRetreat(){
   if(B.over) return false;
+  if(B.modifiers && B.modifiers.noRetreat) return false;
   if(B.round <= 1) return false;
   if(B.stageIdx <= 0) return false;
   if(B.retreatUsedThisTurn) return false;
@@ -164,9 +196,10 @@ function renderBUnit(u){
     else if(B.cur === u) actMark = '<span class="bact-mark" style="color:#ffd76e">▶</span>';
   }
   const st = u.star || 0;
+  const starStr = st > 0 ? ' ' + '★'.repeat(st) : '';
   return `<div class="${cls}" data-uid="${u.uid}" onclick="clickBUnit('${u.uid}')">${badge}${actMark}
-    <div class="bnm">${tankNameHTML(u.name, u.ty, 0, {iconFallback: u.icon, star: st})}</div>
-    ${barHTML(pct,'bhp')}
+    <div class="bnm">${u.icon}<span class="tank-name" data-star="${st}">${u.name}${starStr}</span></div>
+    <div class="bhp"><i style="width:${pct}%"></i></div>
     <div class="bnum">${u.hp}/${u.maxHp}</div>
     <div class="bst"><span style="color:#ff8a6b">${u.at}</span><span style="color:#4dd0ff">${u.s}</span><span style="color:#c86bff">${u.p}${u.heat?'*':''}</span><span style="color:#ffb84d">${u.a}</span></div></div>`;
 }
@@ -192,23 +225,24 @@ function battleActionHTML(){
   }
   return '<div class="bhint">等待中…</div>';
 }
-
 function skipPlayerTurn(){
   if(B.await !== 'target') return;
   const r = B.resolve;
   B.resolve = null; B.await = null;
   if(r) r({ __skip: true });
 }
-
 function buildBattleOrder(){
   const alive = B.units.filter(u => u.alive);
   const groups = new Map();
   alive.forEach(u => { const k = u.s; if(!groups.has(k)) groups.set(k, []); groups.get(k).push(u); });
   const sp = [...groups.keys()].sort((a, b) => b - a); const o = [];
+  const init = B.modifiers && B.modifiers.initiative;
   sp.forEach(s => {
     const grp = groups.get(s);
     const ps = grp.filter(u => u.side === 'player').sort((a, b) => a.idx - b.idx);
     const es = grp.filter(u => u.side === 'enemy').sort((a, b) => a.idx - b.idx);
+    if(init === 'player'){ o.push(...ps, ...es); return; }
+    if(init === 'enemy'){ o.push(...es, ...ps); return; }
     if(ps.length && es.length){ let pi = 0, ei = 0;
       for(let i = 0; i < ps.length + es.length; i++){ const t = thueMorse(i);
         if(t === 0 && pi < ps.length) o.push(ps[pi++]);
@@ -234,11 +268,12 @@ function showBattleDetail(u){
   const m = document.createElement('div'); m.className = 'detail';
   m.onclick = e => { if(e.target === m) m.remove(); };
   const st = u.star || 0;
-  m.innerHTML = `<h3>${tankNameHTML(u.name, u.ty, 0, {iconFallback: u.icon, star: st})} ${TY_CN[u.ty]}</h3>
+  const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
+  m.innerHTML = `<h3>${u.icon}<span class="tank-name" data-star="${st}">${u.name}${stars}</span> ${TY_CN[u.ty]}</h3>
     <div class="stats"><div><span>火力</span><b>${u.fd}</b></div><div><span>攻击</span><b>${u.at}</b></div>
     <div><span>速度</span><b>${u.s}</b></div><div><span>穿深</span><b>${u.p}${u.heat?'*':''}</b></div>
     <div><span>装甲</span><b>${u.a}</b></div><div><span>活度</span><b>${u.hp}/${u.maxHp}</b></div></div>
-    <div class="acts">${closeBtnHTML('.detail')}</div>`;
+    <div class="acts"><button class="btn" onclick="this.closest('.detail').remove()">关闭</button></div>`;
   document.body.appendChild(m);
 }
 function waitPlayerTarget(u){ return new Promise(r => { B.resolve = r; B.await = 'target'; render(); }); }
@@ -380,7 +415,7 @@ async function tryAIUseTactical(u){
   return true;
 }
 function getAITacticalSlotsForBattle(){
-  if(B.mode === 'campaign'){
+  if(B.mode === 'campaign' || B.mode === 'historical'){
     const ch = getCur() ? getCur().chapter : 1;
     return ch >= 21 ? 2 : ch >= 11 ? 1 : 0;
   }
@@ -535,6 +570,17 @@ async function runBattle(){
       checkBattleOver();
     }
     if(B.over) break;
+    if(B.modifiers && B.modifiers.maxRounds && B.round >= B.modifiers.maxRounds){
+      B.over = true;
+      const mode = B.modifiers.victoryMode || 'annihilate';
+      if(mode === 'survive'){
+        B.result = B.units.some(u => u.side === 'player' && u.alive) ? 'win' : 'lose';
+      } else {
+        B.result = B.units.some(u => u.side === 'enemy' && u.alive) ? 'lose' : 'win';
+      }
+      addBLog(`<div class="round-sep">⏱ 时间耗尽</div>`);
+      break;
+    }
     if(B.stageIdx < 4){
       B.stageIdx++;
       addBLog(`📦 双方移动至 <b>${STG[B.stageIdx].n}</b>`);
@@ -556,6 +602,25 @@ async function runBattle(){
       if(B.perfect) base = Math.round(base * 1.3);
       B.earned = base; B.isFirstClear = firstClear;
       if(cur.chapter === cur.clearMax + 1) cur.clearMax = cur.chapter;
+    } else {
+      B.earned = Math.round(fullReward * 0.65 * mult);
+      B.isFirstClear = false;
+    }
+    cur.rp += B.earned;
+    applyCampaignVeteranResult(cur);
+    persistSaves(); SFX.coin();
+  } else if(B.mode === 'historical'){
+    const cur = getCur();
+    const fullReward = levelReward(B.histLevel);
+    let mult = 1;
+    if(B.difficulty === 'normal') mult = 1.1; else if(B.difficulty === 'hard') mult = 1.35;
+    const firstClear = (B.result === 'win' && B.histLevel > (cur.hist.clearMax || 0));
+    if(B.result === 'win'){
+      let base = Math.round(fullReward * mult);
+      if(firstClear) base = Math.round(base * 1.5);
+      if(B.perfect) base = Math.round(base * 1.3);
+      B.earned = base; B.isFirstClear = firstClear;
+      if(B.histLevel === cur.hist.clearMax + 1) cur.hist.clearMax = B.histLevel;
     } else {
       B.earned = Math.round(fullReward * 0.65 * mult);
       B.isFirstClear = false;
@@ -677,6 +742,7 @@ let showBattleResult = function(){
   if(win) SFX.win(); else SFX.lose();
   const div = document.createElement('div'); div.className = 'res-modal'; div.id = 'battleResult';
   if(B.mode === 'rogue'){ showRogueBattleResult(); return; }
+  if(B.mode === 'historical'){ showHistBattleResult(); return; }
   if(B.mode === 'free'){
     div.innerHTML = `<div class="res-title ${win?'win':'lose'}">${win?'蓝方胜利':'红方胜利'}</div>${renderStatsHTML()}
       <div class="res-btns"><button class="btn pri" onclick="freeRestart()">🔁 再打一次</button><button class="btn" onclick="backToFreeSelect()">← 返回选人</button><button class="btn" onclick="backMain()">🏠 主菜单</button></div>`;
@@ -705,6 +771,63 @@ let showBattleResult = function(){
     </div>`;
   document.body.appendChild(div);
 };
+function showHistBattleResult(){
+  const win = B.result === 'win';
+  if(win) SFX.win(); else SFX.lose();
+  document.getElementById('battleResult')?.remove();
+  const cur = getCur();
+  const chapter = getHistChapterByLevel(B.histLevel);
+  const perfect = B.perfect && win;
+  const nextLv = B.histLevel + 1;
+  const hasNext = !!((LEVEL_CONFIG[S.nation] || {})[nextLv]);
+  const timeout = !win && B.modifiers && B.modifiers.maxRounds && B.units.some(u => u.side === 'enemy' && u.alive);
+  const div = document.createElement('div'); div.className = 'res-modal'; div.id = 'battleResult';
+  div.innerHTML = `<div class="res-title ${win?'win':'lose'}">${win?'胜 利':'败 北'}</div>
+    ${win && perfect ? `<div style="font-size:14px;font-weight:900;color:#7bff7b;letter-spacing:2px;margin-top:-8px">✨ 完美通关 ✨</div>` : ''}
+    ${timeout ? `<div style="font-size:13px;font-weight:800;color:#ff8080;letter-spacing:2px;margin-top:-8px">⏱ 时间耗尽</div>` : ''}
+    <div class="res-card">
+      <div class="res-row"><span>战役</span><b>${chapter ? chapter.name : ''} · 第 ${B.histLevel} 关</b></div>
+      ${win ? `<div class="res-row"><span>基础奖励</span><b>${levelReward(B.histLevel)}</b></div>` : ''}
+      ${B.isFirstClear ? `<div class="res-row"><span>首通加成</span><b class="bonus">×1.5</b></div>` : ''}
+      ${perfect ? `<div class="res-row"><span>完美通关</span><b class="bonus">×1.3</b></div>` : ''}
+      <div class="res-row"><span>${win ? '获得' : '败北奖励'}</span><b>+${B.earned}</b></div>
+      <div class="res-row"><span>当前 RP</span><b>${cur.rp}</b></div>
+    </div>
+    ${renderStatsHTML()}
+    ${renderVeteranResultHTML()}
+    <div class="res-btns">
+      ${win && hasNext ? `<button class="btn pri" onclick="histNextLevel()">▶ 下一关（第 ${nextLv} 关）</button>` : ''}
+      <button class="btn" onclick="retryHistLevel()">🔁 再打一次</button>
+      <button class="btn" onclick="backToHistChapters()">📜 返回关卡列表</button>
+    </div>`;
+  document.body.appendChild(div);
+}
+function histNextLevel(){
+  const lv = B.histLevel + 1;
+  document.getElementById('battleResult')?.remove();
+  const chapter = getHistChapterByLevel(lv);
+  if(chapter) S.histChapterId = chapter.id;
+  S.histMode = true;
+  S.baseTab = 'base';
+  S.screen = 'base';
+  render();
+}
+function retryHistLevel(){
+  const lv = B.histLevel;
+  document.getElementById('battleResult')?.remove();
+  S.histMode = true;
+  S.baseTab = 'base';
+  S.screen = 'base';
+  render();
+  openHistDiffModal(lv);
+}
+function backToHistChapters(){
+  document.getElementById('battleResult')?.remove();
+  S.histMode = true;
+  S.baseTab = 'base';
+  S.screen = 'base';
+  render();
+}
 function nextChapter(){ const cur = getCur(); cur.chapter++; persistSaves(); document.getElementById('battleResult')?.remove(); backToBase(); }
 function endCampaign(){ const cur = getCur(); cur.clearMax = cur.chapter; persistSaves(); document.getElementById('battleResult')?.remove(); toast('🎉 通关！'); backToBase(); }
 function retryChapter(){ document.getElementById('battleResult')?.remove(); const cur = getCur(); if(cur.lineup.length === 0){ toast('请先编队'); backToBase(); return; } openDiffModal(backToBase); }
@@ -715,9 +838,18 @@ function startBattle(diff){
   const cur = getCur(); const pn = cur.lineup.map(i => cur.tank[i].n);
   const cached = window._diffTeams && window._diffTeams[diff];
   const en = cached || generateEnemyTeam(cur.chapter, diff); window._diffTeams = null;
-  resetBattleState('campaign', diff);
+  B.units = []; B.log = []; B.stats = {}; B.round = 0; B.stageIdx = 0; B.ccRound = 0;
+  B.cur = null; B.await = null; B.resolve = null; B.over = false;
+  B.result = null; B.difficulty = diff; B.uid = 0;
+  B.mode = 'campaign'; B.earned = 0; B.lastStage = -1; B.mapCtx = null; B.aiCallback = null;
+  B.perfect = false; B.isFirstClear = false; B._veteranResult = null;
+  B.retreatUsedThisTurn = false; B.retreatSelect = false; B.retreatPicked = [];
+  B.modifiers = null; B.histLevel = 0; B.histChapterName = '';
+  B.auto = AUTO_BATTLE_CONTINUOUS;
   initBattleBuffs();
-  const playerEq = cur.chapter >= 6 ? (cur.tacEquipped || []).slice(0, cur.tacSlots || 0) : [];
+  const cm0 = cur.hist.clearMax || 0;
+  const histSlots = cm0 >= 15 ? 2 : cm0 >= 5 ? 1 : 0;
+  const playerEq = (cur.tacEquipped || []).slice(0, histSlots);
   B.tactical = { playerEquipped: playerEq, playerUsed: [], enemyEquipped: [], enemyUsed: [] };
   setupAITacticalPool(getAITacticalSlotsForBattle());
   pn.forEach((n, i) => B.units.push(makeBattleUnit(n, 'player', i, null, cur.tank[cur.lineup[i]].exp || 0)));

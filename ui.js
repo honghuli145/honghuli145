@@ -42,6 +42,7 @@ function render(){
     guide: renderGuide,
     rogueStart: renderRogueStart, rogueMap: renderRogueMap,
     changelog: renderChangelog,
+    histChapters: renderHistChapters,
   };
   app.innerHTML = (map2[S.screen] || renderMain)();
   if(S.screen === 'battle'){
@@ -59,20 +60,47 @@ function renderMain(){
   <div class="sub">研发点科技树 · 三国独立 · 三种模式</div>
   <div class="btns">
     <button class="btn pri" onclick="goSaveSelect()">⚔ 战役模式</button>
+    <button class="btn hist-btn" onclick="goHistSaveSelect()">📜 历史战役</button>
     <button class="btn warn" onclick="M.screen='mapSaveSelect';S.screen='none';render()">🗺 地区模式</button>
     <button class="btn rogue-btn" onclick="goRogue()">🎲 远征（Roguelike）</button>
-    <button class="btn" onclick="goFreeModeSelect()">🎮 自由模式</button>
+    <button class="btn free-btn" onclick="goFreeModeSelect()">🎮 自由模式</button>
     <button class="btn info" onclick="goGuide()">📖 游戏指南</button>
     <button class="btn" onclick="goChangelog()">📜 更新日志</button>
   </div>
   <div class="ver">v${VERSION}</div>`;
 }
 function goSaveSelect(){ S.screen = 'saveSelect'; M.screen = 'none'; render(); }
+function goHistSaveSelect(){ S.histMode = true; S.screen = 'saveSelect'; M.screen = 'none'; render(); }
 function goFreeModeSelect(){ S.screen = 'freeModeSelect'; M.screen = 'none'; render(); }
-function backMain(){ S.screen = 'main'; M.screen = 'main'; render(); }
+function backMain(){ S.histMode = false; S.histChapterId = null; S.screen = 'main'; M.screen = 'main'; render(); }
 
 // ---------- 更新日志 ----------
 const CHANGELOG = [
+  { v: '0.5.1', date: '2025-10-02', items: [
+    '📜 新增历史战役模式（主菜单独立入口，与战役模式共享存档）',
+    '📜 历史战役第一章 · 波兰战役（1939.9，5 关）',
+    '📜 历史战役第二章 · 法国战役（1940.5，5 关）',
+    '📜 历史战役第三章 · 北非战役（1941.2-1943.5，5 关）',
+    '📜 历史战役第四章 · 巴巴罗萨（1941.6-1941.12，5 关）',
+    '📜 历史战役第五章 · 库尔斯克（1943.7，5 关）',
+    '📜 历史战役第六章 · 帝国黄昏（1944.6-1945.4，5 关）',
+    '📜 全 6 章 30 关全部开放',
+    '🌍 新增对手国：法国、波兰、英国',
+    '🇬🇧 新增英系后期坦克：克伦威尔、挑战者、彗星、丘吉尔 Mk.VIII、黑王子、百夫长、土龟',
+    '🇺🇸 美系高级对手：M4A3E8、M26潘兴、T29、T30、T32、T34、T28、M6A2E1、T26E4超潘',
+    '🇷🇺 苏系高级对手：t-43、KV-13、KV-85、KV-2、IS-1、IS-2、IS-3、IS-4、SU-100、SU-152、SU-100Y、ISU-122、ISU-152、t-44B',
+    '🎯 关卡特色：initiative（先手）/ startStage（开局距离）/ noRetreat（禁撤退）/ maxRounds（限时）',
+    '🎯 关卡特色：enemyLvMod（敌军等级偏移）/ enemyCountMul（敌军数量倍率）',
+    '🎯 关卡特色：atkMod（攻击修正）/ penMod（穿深修正）/ floatRange（浮动区间）',
+    '🌤 新增天气系统：沙暴 🌫️ / 严寒 ❄️ / 暴雨 🌧️ / 迷雾 🌫️ / 夜战 🌙',
+    '🎨 新增主题配色：沙漠黄、雪地白、草原绿、废墟灰',
+    '🗺 关卡列表显示天气图标',
+    '📖 图鉴区分"可拥有"与"敌方专属"坦克',
+    '🎯 历史战役独立槽位（打完第 5 关开 1 指令槽，第 15 关开 2）',
+    '🎯 历史战役独立出战槽（波兰 2 → 法国 3 → 北非 4 → 巴巴罗萨 5 → 后续 6）',
+    '🎮 自由模式按钮配色',
+    '📜 版本号升至 0.5.1',
+  ]},
   { v: '0.4.2', date: '2025-10-01', items: [
     '⚔️ 战斗：手机端双方队伍位移改用 vh 单位，随屏幕自适应不重叠',
     '⚔️ 战斗：撤退后射程不足时，可直接点「⏭ 跳过本回合」',
@@ -88,15 +116,13 @@ const CHANGELOG = [
     '🎲 远征：被击毁的坦克进入阵亡池，可通过篝火 / 事件 / 商店复活',
     '🎲 远征：打赢后可从被击毁的敌人中俘获坦克（半血 · 新兵）',
     '🎲 远征：普通战随机给 1 辆；精英 / Boss 战 3 选 1',
-    '🎲 远征：精英坦克仅在第二面出现（第一面精英节点不出精英）',
+    '🎲 远征：精英坦克仅在第二面出现',
     '🎲 远征：敌人数曲线重做，第一面 1-3 辆（Boss 4），第二面 2-5 辆（Boss 6）',
-    '🎲 远征：新增 4 个难度滑块（等级 / 数量 / 开局 RP / 奖励倍率），存本地',
+    '🎲 远征：新增 4 个难度滑块（等级 / 数量 / 开局 RP / 奖励倍率）',
     '🎲 远征：事件池扩展到 11 个，新增「英灵殿」复活事件',
     '🎲 远征：商店新增复活券，移除单辆修理',
     '🎲 远征：新增「💾 暂离」，可保存进度下次继续',
-    '🎲 远征：地图连线优化，按索引邻近生成 + 贝塞尔曲线，不跨节点',
-    '🎲 远征：地图高度与滚动修复，可见范围扩大到 6-7 层',
-    '🎲 远征：地图页新增「⚙ 设置」入口',
+    '🎲 远征：地图连线优化 + 高度与滚动修复',
     '🖥 主菜单新增「📜 更新日志」入口',
   ]},
 ];
@@ -254,15 +280,22 @@ function updateDamageCalc(){
   const fp = +document.getElementById('dcFP').value || 1;
   const dist = +document.getElementById('dcDist').value || 0;
   const heat = document.getElementById('dcHeat').checked;
-  const base = damageCore({ at: atk, p: pen, fp, heat, km: dist, armor });
-  const effPen = base.effPen;
-  const diff = base.diff;
-  const mul = base.mul;
-  const dmgBase = base.dmg;
+  const effPen = heat ? pen : pen * (1 - 0.15 * dist);
+  const diff = armor - effPen;
+  let mul;
+  if(fp <= 50) mul = diff <= 0 ? 1 : diff <= 5 ? 0.5 : diff <= 10 ? 0.25 : 0.125;
+  else mul = diff <= 0 ? 1 : diff <= 10 ? 0.5 : diff <= 20 ? 0.25 : 0.125;
+  const dmgBase = Math.max(1, Math.round(atk * mul));
+  const epBase = heat ? pen : pen * (1 - 0.15 * dist);
   let minD = Infinity, maxD = 0;
   for(const aMul of [0.9, 1.1]){
     for(const pMul of [0.9, 1.1]){
-      const d = damageCore({ at: atk, p: pen, fp, heat, km: dist, armor, atkMul: aMul, penMul: pMul }).dmg;
+      const ep = epBase * pMul;
+      const df = armor - ep;
+      let m;
+      if(fp <= 50) m = df <= 0 ? 1 : df <= 5 ? 0.5 : df <= 10 ? 0.25 : 0.125;
+      else m = df <= 0 ? 1 : df <= 10 ? 0.5 : df <= 20 ? 0.25 : 0.125;
+      const d = Math.max(1, Math.round(atk * aMul * m));
       if(d < minD) minD = d;
       if(d > maxD) maxD = d;
     }
@@ -415,10 +448,24 @@ function renderNationSelect(){
       <p>第 ${ns.chapter} 关 · 拥有 ${ns.tank.length} 辆 · 研发点 ${ns.rp}</p>
     </div>`;
   });
-  html += `</div><div class="btns" style="margin-top:auto"><button class="btn" onclick="goSaveSelect()">← 返回存档</button><button class="btn" onclick="backMain()">← 主菜单</button></div>`;
+  const backFn = S.histMode ? `S.histMode=false;goSaveSelect()` : `goSaveSelect()`;
+  html += `</div><div class="btns" style="margin-top:auto"><button class="btn" onclick="${backFn}">← 返回存档</button><button class="btn" onclick="backMain()">← 主菜单</button></div>`;
   return html;
 }
-function pickNation(n){ S.nation = n; SAVES[S.saveIndex].lastNation = n; persistSaves(); S.screen = 'base'; S.baseTab = 'base'; S.compareA = null; S.compareB = null; render(); }
+function pickNation(n){
+  S.nation = n;
+  SAVES[S.saveIndex].lastNation = n;
+  persistSaves();
+  if(S.histMode){
+    S.screen = 'histChapters';
+  } else {
+    S.screen = 'base';
+    S.baseTab = 'base';
+    S.compareA = null;
+    S.compareB = null;
+  }
+  render();
+}
 function goNationSelect(){ S.screen = 'nationSelect'; render(); }
 
 // ---------- 自由模式 ----------
@@ -514,7 +561,13 @@ function startFreeBattle(){
   const isAI = F.mode === 'ai'; const P = F.team.p; let E = F.team.e;
   if(isAI){ if(P.length === 0){ toast('请先选蓝方'); return; } E = generateFreeAITeam(P); }
   else { if(P.length === 0 || E.length === 0){ toast('双方都需至少 1 辆'); return; } }
-  resetBattleState('free'); B.freeMode = isAI ? 'ai' : 'hotseat';
+  B.units = []; B.log = []; B.stats = {}; B.round = 0; B.stageIdx = 0; B.ccRound = 0;
+  B.cur = null; B.await = null; B.resolve = null; B.over = false;
+  B.result = null; B.difficulty = 'normal'; B.uid = 0;
+  B.mode = 'free'; B.freeMode = isAI ? 'ai' : 'hotseat'; B.earned = 0; B.lastStage = -1; B.mapCtx = null; B.aiCallback = null;
+  B.perfect = false; B.isFirstClear = false; B._veteranResult = null;
+  B.retreatUsedThisTurn = false; B.retreatSelect = false; B.retreatPicked = [];
+  B.auto = AUTO_BATTLE_CONTINUOUS;
   initBattleBuffs();
   const pTacs = (F.pTacs || ['volley','smoke']).slice(0, 2);
   const eTacs = isAI ? ['apround','repair'] : (F.eTacs || ['apround','repair']).slice(0, 2);

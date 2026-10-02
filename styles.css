@@ -37,10 +37,10 @@ h1{font-size:20px;font-weight:800;text-align:center;color:#7bff7b;letter-spacing
 .tabs2 button.act{border-color:#4dff7b;background:rgba(77,255,123,.15);color:#9cff9c}
 .panel{background:rgba(10,25,10,.65);border:1.5px solid #2a4a2a;border-radius:12px;padding:12px;margin-top:8px}
 .panel h3{font-size:14px;color:#8ab88a;margin-bottom:8px}
-.tree-panel{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.tree-panel{padding:0;overflow:visible;display:flex;flex-direction:column}
 .tree-head{padding:10px 12px 6px;border-bottom:1px solid #2a4a2a}
 .tree-head h3{margin:0;font-size:14px;color:#8ab88a}
-.tree-scroll{height:45vh;overflow:auto;background:rgba(0,0,0,.35);-webkit-overflow-scrolling:touch;position:relative}
+.tree-scroll{height:auto;overflow-x:auto;overflow-y:hidden;background:rgba(0,0,0,.35);-webkit-overflow-scrolling:touch;position:relative}
 .tree-canvas{position:relative}
 .tree-zoomer{position:relative}
 .tree-scroll{cursor:grab}
@@ -528,3 +528,262 @@ h1{font-size:20px;font-weight:800;text-align:center;color:#7bff7b;letter-spacing
 
 /* ===== 战斗：位移不挡点击 ===== */
 .bdist, .bbanner-slot, #blog{position:relative;z-index:1}
+
+/* ===== 历史战役按钮 ===== */
+.btn.hist-btn{background:linear-gradient(180deg,#e8c060,#a07820);border-color:#e8c060;color:#2a1a00}
+
+/* ===== 历史战役横幅 ===== */
+.hist-bar{
+  display:flex;flex-direction:column;gap:2px;
+  padding:6px 10px;margin-bottom:4px;
+  background:linear-gradient(160deg,rgba(77,157,255,.15),rgba(0,0,0,0));
+  border:1.5px solid #3a5a8a;border-radius:8px;
+  font-size:11px;line-height:1.4;flex:0 0 auto;
+}
+.hist-bar .hb-title{color:#9cd4ff;font-weight:800}
+.hist-bar .hb-enemy{color:#ffd76e;font-size:10px}
+.hist-bar .hb-rules{color:#ff9c9c;font-size:10px}
+
+/* ===== 历史章节列表 ===== */
+.hist-chapter{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:14px 16px;margin:0;border-bottom:1px solid #1a2a1a;
+  cursor:pointer;transition:.15s;
+}
+.hist-chapter:last-child{border-bottom:none}
+.hist-chapter:active{background:rgba(77,255,123,.08)}
+.hist-chapter.locked{opacity:.45;cursor:not-allowed}
+.hist-chapter.wip{opacity:.35;cursor:not-allowed}
+.hist-chapter.done{background:rgba(77,255,123,.06)}
+.hist-chapter .hc-name{font-size:15px;font-weight:800;color:#9cd4ff}
+.hist-chapter.done .hc-name{color:#7bff7b}
+.hist-chapter .hc-date{font-size:11px;color:#8ab88a;margin-top:2px}
+.hist-chapter .hc-status{font-size:12px;font-weight:700;color:#8ab88a;flex-shrink:0}
+.hist-chapter.done .hc-status{color:#7bff7b}
+
+/* ===== 历史关卡列表 ===== */
+.hist-levels{display:flex;flex-direction:column;gap:6px}
+.hist-level{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 12px;border-radius:8px;
+  border:1.5px solid #2a4a2a;background:rgba(0,0,0,.4);
+  cursor:pointer;transition:.15s;position:relative;
+}
+.hist-level:active{transform:scale(.98)}
+.hist-level.locked{opacity:.4;cursor:not-allowed}
+.hist-level.cleared{border-color:#4dff7b;background:rgba(77,255,123,.08)}
+.hist-level .hl-num{font-size:13px;font-weight:800;color:#e0e8e0;flex-shrink:0;min-width:60px}
+.hist-level.cleared .hl-num{color:#9cff9c}
+.hist-level .hl-tags{font-size:11px;color:#ffd76e;flex:1}
+.hist-level .hl-check{color:#7bff7b;font-weight:900}
+.hist-level .hl-lock{color:#5a6a5a}
+
+/* ===== 历史难度弹窗规则 ===== */
+.hist-rules{
+  display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;
+}
+.hist-rules span{
+  font-size:11px;padding:3px 8px;border-radius:6px;
+  background:rgba(255,215,110,.12);color:#ffd76e;
+  border:1px solid rgba(255,215,110,.3);
+}
+
+/* 历史战役 · 关卡名 */
+.hist-level .hl-name{
+  font-size:11px;
+  color:#9cd4ff;
+  font-weight:700;
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.hist-level.cleared .hl-name{color:#9cff9c}
+.hist-level .hl-tags{
+  font-size:10px;
+  color:#ffd76e;
+  flex-shrink:0;
+}
+
+/* ===== 限时计时器 ===== */
+.timer-badge{
+  display:inline-block;
+  padding:3px 10px;
+  margin-left:6px;
+  background:rgba(255,215,110,.18);
+  border:1.5px solid rgba(255,215,110,.55);
+  border-radius:6px;
+  color:#ffd76e;
+  font-weight:900;
+  font-size:14px;
+  letter-spacing:1.5px;
+  vertical-align:middle;
+  font-variant-numeric:tabular-nums;
+}
+.timer-badge.warn{
+  background:rgba(255,107,107,.2);
+  border-color:#ff6b6b;
+  color:#ff9c9c;
+  animation:timerPulse 1s infinite;
+}
+@keyframes timerPulse{
+  0%,100%{opacity:1}
+  50%{opacity:.5}
+}
+
+/* ===== 北非沙漠主题 ===== */
+.bwrap.theme-desert .bteam{
+  background:rgba(180,140,80,.08);
+  border-radius:8px;
+  padding:4px;
+}
+.bwrap.theme-desert .bdist{
+  background:rgba(180,140,80,.15);
+  color:#e0c080;
+  border:1px solid rgba(180,140,80,.25);
+}
+.bwrap.theme-desert .bdist b{color:#ffd76e}
+.bwrap.theme-desert .bbanner-slot .bbanner{
+  background:rgba(180,140,80,.18) !important;
+  color:#ffd76e !important;
+  border:1px solid rgba(180,140,80,.3);
+}
+.bwrap.theme-desert #blog{
+  background:rgba(70,50,20,.45);
+  border:1px solid rgba(180,140,80,.15);
+}
+.bwrap.theme-desert .bunit.player{
+  background:rgba(180,140,80,.12);
+  border-color:rgba(255,215,110,.5);
+}
+.bwrap.theme-desert .bunit.enemy{
+  background:rgba(200,120,60,.15);
+  border-color:rgba(255,140,80,.55);
+}
+.bwrap.theme-desert .hist-bar{
+  background:linear-gradient(160deg,rgba(180,140,80,.25),rgba(0,0,0,0));
+  border-color:#8a6a3a;
+}
+.bwrap.theme-desert .hist-bar .hb-title{color:#ffd76e}
+.bwrap.theme-desert .hist-bar .hb-enemy{color:#e0c080}
+.bwrap.theme-desert .hist-bar .hb-rules{color:#ffae6b}
+
+/* ===== 苏联冬季主题 ===== */
+.bwrap.theme-winter .bteam{
+  background:rgba(230,235,240,.1);
+  border-radius:8px;
+  padding:4px;
+}
+.bwrap.theme-winter .bdist{
+  background:rgba(220,228,236,.18);
+  color:#e8eef5;
+  border:1px solid rgba(230,238,245,.35);
+}
+.bwrap.theme-winter .bdist b{color:#ffffff}
+.bwrap.theme-winter .bbanner-slot .bbanner{
+  background:rgba(220,228,236,.2) !important;
+  color:#ffffff !important;
+  border:1px solid rgba(230,238,245,.4);
+}
+.bwrap.theme-winter #blog{
+  background:rgba(200,210,220,.08);
+  border:1px solid rgba(230,238,245,.2);
+}
+.bwrap.theme-winter .bunit.player{
+  background:rgba(230,238,245,.15);
+  border-color:rgba(200,220,240,.6);
+}
+.bwrap.theme-winter .bunit.enemy{
+  background:rgba(255,160,160,.15);
+  border-color:rgba(255,160,160,.6);
+}
+.bwrap.theme-winter .hist-bar{
+  background:linear-gradient(160deg,rgba(230,238,245,.25),rgba(0,0,0,0));
+  border-color:#8a9aaa;
+}
+.bwrap.theme-winter .hist-bar .hb-title{color:#ffffff}
+.bwrap.theme-winter .hist-bar .hb-enemy{color:#e8eef5}
+.bwrap.theme-winter .hist-bar .hb-rules{color:#ffb0b0}
+
+/* ===== 库尔斯克草原绿 ===== */
+.bwrap.theme-steppe .bteam{
+  background:rgba(90,170,50,.2);
+  border-radius:8px;
+  padding:4px;
+  border:1px solid rgba(120,200,70,.25);
+}
+.bwrap.theme-steppe .bdist{
+  background:rgba(80,160,45,.3);
+  color:#d8f0a8;
+  border:1px solid rgba(130,200,70,.55);
+}
+.bwrap.theme-steppe .bdist b{color:#c8ff80}
+.bwrap.theme-steppe .bbanner-slot .bbanner{
+  background:rgba(80,160,45,.35) !important;
+  color:#e0ffa0 !important;
+  border:1px solid rgba(130,200,70,.6);
+}
+.bwrap.theme-steppe #blog{
+  background:rgba(30,55,15,.7);
+  border:1px solid rgba(130,200,70,.35);
+}
+.bwrap.theme-steppe .bunit.player{
+  background:rgba(90,180,50,.22);
+  border-color:rgba(150,220,80,.75);
+}
+.bwrap.theme-steppe .bunit.enemy{
+  background:rgba(255,140,140,.18);
+  border-color:rgba(255,140,140,.6);
+}
+.bwrap.theme-steppe .hist-bar{
+  background:linear-gradient(160deg,rgba(90,170,50,.4),rgba(0,0,0,0));
+  border-color:#5a8a2a;
+}
+.bwrap.theme-steppe .hist-bar .hb-title{color:#a8f050}
+.bwrap.theme-steppe .hist-bar .hb-enemy{color:#c8e890}
+.bwrap.theme-steppe .hist-bar .hb-rules{color:#ffb060}
+
+/* ===== 帝国黄昏废墟灰 ===== */
+.bwrap.theme-ruins .bteam{
+  background:rgba(140,140,140,.1);
+  border-radius:8px;
+  padding:4px;
+}
+.bwrap.theme-ruins .bdist{
+  background:rgba(140,140,140,.18);
+  color:#d0d0d0;
+  border:1px solid rgba(160,160,160,.35);
+}
+.bwrap.theme-ruins .bdist b{color:#e8e8e8}
+.bwrap.theme-ruins .bbanner-slot .bbanner{
+  background:rgba(140,140,140,.2) !important;
+  color:#e0e0e0 !important;
+  border:1px solid rgba(160,160,160,.4);
+}
+.bwrap.theme-ruins #blog{
+  background:rgba(50,50,50,.6);
+  border:1px solid rgba(160,160,160,.15);
+}
+.bwrap.theme-ruins .bunit.player{
+  background:rgba(140,140,140,.15);
+  border-color:rgba(180,200,220,.5);
+}
+.bwrap.theme-ruins .bunit.enemy{
+  background:rgba(255,140,140,.15);
+  border-color:rgba(255,140,140,.6);
+}
+.bwrap.theme-ruins .hist-bar{
+  background:linear-gradient(160deg,rgba(140,140,140,.25),rgba(0,0,0,0));
+  border-color:#6a6a6a;
+}
+.bwrap.theme-ruins .hist-bar .hb-title{color:#e0e0e0}
+.bwrap.theme-ruins .hist-bar .hb-enemy{color:#c8c8c8}
+.bwrap.theme-ruins .hist-bar .hb-rules{color:#ffae6b}
+
+/* ===== 自由模式按钮配色 ===== */
+.btn.free-btn{
+  background:linear-gradient(180deg,#4dffd0,#2ab890);
+  border-color:#4dffd0;
+  color:#002a1a;
+}

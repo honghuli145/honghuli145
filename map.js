@@ -354,7 +354,7 @@ function unitStarRange(u){
 function renderHpBar(u){
   const pct = Math.round(unitHpPct(u) * 100);
   const cls = pct < 30 ? 'low' : pct < 70 ? 'mid' : '';
-  return barHTML(pct, 'mini-hp' + (cls ? ' '+cls : ''));
+  return `<div class="mini-hp ${cls}"><i style="width:${pct}%"></i></div>`;
 }
 function renderMapCell(id, sv){
   const cell = sv.cells[id]; const owner = cell.owner;
@@ -608,7 +608,12 @@ function startMapBattle(attackerUnit, targetCellId){
   M.undoStack = [];
   const en = au.tanks.map(t => normalizeTank(t));
   const pn = attackerUnit.tanks.map(t => normalizeTank(t));
-  resetBattleState('map');
+  B.units = []; B.log = []; B.stats = {}; B.round = 0; B.stageIdx = 0; B.ccRound = 0;
+  B.cur = null; B.await = null; B.resolve = null; B.over = false;
+  B.result = null; B.difficulty = 'normal'; B.uid = 0;
+  B.mode = 'map'; B.earned = 0; B.lastStage = -1; B.aiCallback = null;
+  B.perfect = false; B.isFirstClear = false; B._veteranResult = null;
+  B.auto = AUTO_BATTLE_CONTINUOUS;
   initBattleBuffs();
   B.tactical = { playerEquipped: (sv.tacEquipped || []).slice(0, sv.tacSlots || 0), playerUsed: [], enemyEquipped: [], enemyUsed: [] };
   setupAITacticalPool(getAITacticalSlotsForBattle());
@@ -846,7 +851,12 @@ async function triggerMapBattle(playerU, aiU){
   return new Promise(resolve => {
     const pn = playerU.tanks.map(t => normalizeTank(t));
     const en = aiU.tanks.map(t => normalizeTank(t));
-    resetBattleState('map');
+    B.units = []; B.log = []; B.stats = {}; B.round = 0; B.stageIdx = 0; B.ccRound = 0;
+    B.cur = null; B.await = null; B.resolve = null; B.over = false;
+    B.result = null; B.difficulty = 'normal'; B.uid = 0;
+    B.mode = 'map'; B.earned = 0; B.lastStage = -1;
+    B.perfect = false; B.isFirstClear = false; B._veteranResult = null;
+    B.auto = AUTO_BATTLE_CONTINUOUS;
     initBattleBuffs();
     const sv = getMapCur();
     B.tactical = { playerEquipped: sv ? (sv.tacEquipped || []).slice(0, sv.tacSlots || 0) : [], playerUsed: [], enemyEquipped: [], enemyUsed: [] };
@@ -939,10 +949,11 @@ function renderMapBase(){
         const isE = !!ELITE_TANKS[t.n];
         const exp = t.exp || 0;
         const st = getStar(exp);
+        const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
         const pct = expProgressPct(exp);
         const full = st >= 3 ? ' full' : '';
         const sellBtn = isE ? '' : `<span class="sell" onclick="event.stopPropagation();confirmSellMapTank(${i})">×</span>`;
-        return `<div class="tank-chip" onclick="showTankDetail(true,${i})">${sellBtn}${tankNameHTML(t.n, d.ty, exp, {iconFallback: isE?'⭐':TY_ICON[d.ty]})}${barHTML(pct,'exp-bar',full)}</div>`;
+        return `<div class="tank-chip" onclick="showTankDetail(true,${i})">${sellBtn}${isE?'⭐':TY_ICON[d.ty]}<span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span><div class="exp-bar${full}"><i style="width:${pct}%"></i></div></div>`;
       }).join('')}</div>` : '<div style="color:#5a6a5a;font-size:12px">暂无</div>'}
     </div>`;
     const eliteList = NATION_ELITE[sv.nation] || [];
@@ -1189,8 +1200,12 @@ function buyEliteMapTank(name){
   persistMapSaves(); render(); toast(`已购买 ${name}`); SFX.coin();
 }
 function renderMapSettings(){
+  const vp = Math.round(SFX.volume * 100);
   return `<div class="panel"><h3>⚙️ 设置</h3>
-  ${settingsRowsHTML()}
+    <div class="settings-row"><span class="lbl">音效</span><div class="toggle ${SFX.enabled?'on':''}" onclick="toggleSfx()"></div></div>
+    <div class="settings-row"><span class="lbl">音量</span><input type="range" class="vol-slider" min="0" max="100" value="${vp}" oninput="setSfxVolume(this.value)" ${SFX.enabled?'':'disabled'}><span class="vol-val" id="volVal">${vp}%</span></div>
+    <div class="settings-row"><span class="lbl">战斗倍速（跨战斗）</span><div class="toggle ${BATTLE_SPEED?'on':''}" onclick="toggleBattleSpeed()"></div></div>
+    <div class="settings-row"><span class="lbl">战斗自动（跨战斗）</span><div class="toggle ${AUTO_BATTLE_CONTINUOUS?'on':''}" onclick="toggleAutoContinuous()"></div></div>
   </div>
   <div class="btns" style="margin-top:auto"><button class="btn" onclick="M.screen='map';render()">← 返回地图</button><button class="btn" onclick="backMain()">← 主菜单</button></div>`;
 }

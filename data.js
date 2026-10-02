@@ -38,14 +38,109 @@ const TREES = {
 苏: {'t-38':{lv:1,ch:['t-38T','t-40']},'t-38T':{lv:1.5,ch:['t-26A','BT-2']},'t-26A':{lv:3.5,ch:['t-26B','t-28B']},'t-26B':{lv:4.5,ch:['t-26C','t-50','AT-1']},'t-26C':{lv:5.5,ch:[]},'t-50':{lv:6,ch:['t-50A']},'t-50A':{lv:7,ch:[]},'AT-1':{lv:5,ch:[]},'t-28B':{lv:5.5,ch:['t-28E','t-35','t-34/76-40']},'t-28E':{lv:8,ch:[]},'t-35':{lv:6.5,ch:['KV-1-39','SU-100Y']},'KV-1-39':{lv:9,ch:['KV-1-42']},'KV-1-42':{lv:10,ch:['KV-1-E','KV-1-S']},'KV-1-E':{lv:11,ch:[]},'KV-1-S':{lv:11,ch:['KV-13','SU-152']},'KV-13':{lv:11.5,ch:['KV-85','KV-3']},'KV-85':{lv:12,ch:['KV-2','IS-1']},'KV-2':{lv:12.5,ch:[]},'IS-1':{lv:12.5,ch:['IS-2','ISU-122','ISU-152']},'IS-2':{lv:13.5,ch:['IS-3']},'IS-3':{lv:14,ch:['IS-4']},'IS-4':{lv:15,ch:[]},'ISU-122':{lv:13,ch:[]},'ISU-152':{lv:15,ch:[]},'KV-3':{lv:13,ch:[]},'SU-152':{lv:11.5,ch:[]},'SU-100Y':{lv:12.5,ch:[]},'t-34/76-40':{lv:7.5,ch:['t-34/76-41']},'t-34/76-41':{lv:8.5,ch:['t-34/76E','t-34/76-43','t-34/57-41','t-34/85-43','SU-122']},'t-34/76E':{lv:9,ch:['t-43']},'t-34/76-43':{lv:9.5,ch:[]},'t-43':{lv:11,ch:[]},'t-34/57-41':{lv:9,ch:['t-34/57-43']},'t-34/57-43':{lv:10,ch:[]},'t-34/85-43':{lv:10.5,ch:['t-34/85-44']},'t-34/85-44':{lv:11,ch:['t-34/85-45']},'t-34/85-45':{lv:12,ch:['t-34/100','t-44']},'t-34/100':{lv:13,ch:[]},'t-44':{lv:13,ch:['t-44B']},'t-44B':{lv:15,ch:[]},'SU-122':{lv:9,ch:['SU-85']},'SU-85':{lv:9.5,ch:['SU-85M']},'SU-85M':{lv:10,ch:['SU-100']},'SU-100':{lv:11.5,ch:[]},'BT-2':{lv:3,ch:['BT-5']},'BT-5':{lv:4,ch:['BT-7']},'BT-7':{lv:4.5,ch:['BT-8']},'BT-8':{lv:5.5,ch:[]},'t-40':{lv:2.5,ch:['t-40S']},'t-40S':{lv:3.5,ch:['t-60']},'t-60':{lv:4.5,ch:['t-60A']},'t-60A':{lv:5.5,ch:['t-70']},'t-70':{lv:6.5,ch:['t-70M','t-80','SU-57','ZIS-30']},'t-70M':{lv:7.5,ch:['SU-76M']},'SU-76M':{lv:8.5,ch:[]},'t-80':{lv:8,ch:[]},'SU-57':{lv:8,ch:[]},'ZIS-30':{lv:7.5,ch:[]}}
 };
 
-const TY_CN = {light:'轻坦',medium:'中坦',heavy:'重坦',td:'坦歼'};
-const TY_ICON = {light:'⚡',medium:'🔫',heavy:'🛡️',td:'🎯'};
-const NAT_NAME = {德:'德国',美:'美国',苏:'苏联'};
+// ===== 对手国坦克（仅作为 AI 敌人）=====
+const ENEMY_RAW = [
+  // 法国
+  {n:'FT-17',na:'法',ty:'light',fp:8,fd:'8',s:16,p:22,a:22,at:24,ac:265},
+  {n:'R35',na:'法',ty:'light',fp:37,fd:'37/21',s:21,p:25,a:40,at:102,ac:316},
+  {n:'FCM36',na:'法',ty:'light',fp:37,fd:'37/21',s:24,p:25,a:40,at:102,ac:346},
+  {n:'H35',na:'法',ty:'light',fp:37,fd:'37/21',s:28,p:25,a:40,at:102,ac:338},
+  {n:'H39',na:'法',ty:'light',fp:37,fd:'37/34',s:37,p:40,a:40,at:136,ac:346},
+  {n:'R40',na:'法',ty:'light',fp:37,fd:'37/34',s:20,p:40,a:40,at:136,ac:346},
+  {n:'D2',na:'法',ty:'medium',fp:47,fd:'47/32',s:23,p:55,a:40,at:220,ac:447},
+  {n:'S35',na:'法',ty:'medium',fp:47,fd:'47/32',s:41,p:55,a:40,at:220,ac:447},
+  {n:'S40',na:'法',ty:'medium',fp:47,fd:'47/32',s:45,p:55,a:40,at:220,ac:469},
+  {n:'AMX38',na:'法',ty:'medium',fp:47,fd:'47/32',s:25,p:55,a:60,at:220,ac:413},
+  {n:'B1bis',na:'法',ty:'heavy',fp:75,fd:'75/17',s:27,p:55,a:60,at:490,ac:566},
+  {n:'夏尔2C',na:'法',ty:'heavy',fp:75,fd:'75/24',s:15,p:60,a:45,at:562,ac:831},
+  {n:'FCMF1',na:'法',ty:'heavy',fp:90,fd:'90/50',s:24,p:100,a:120,at:810,ac:1183},
+  // 波兰
+  {n:'TK-3',na:'波',ty:'light',fp:8,fd:'8',s:46,p:11,a:8,at:24,ac:141},
+  {n:'TKS',na:'波',ty:'light',fp:20,fd:'20',s:45,p:40,a:10,at:60,ac:173},
+  {n:'TKS-D',na:'波',ty:'td',fp:37,fd:'37/45',s:45,p:52,a:10,at:136,ac:173},
+  {n:'7TP',na:'波',ty:'light',fp:37,fd:'37/45',s:37,p:52,a:17,at:136,ac:316},
+  // 英国
+  {n:'维克斯Mk.VI',na:'英',ty:'light',fp:13,fd:'13/50',s:56,p:26,a:14,at:39,ac:224},
+  {n:'巡洋Mk.II',na:'英',ty:'medium',fp:40,fd:'40/52',s:26,p:53,a:30,at:160,ac:374},
+  {n:'巡洋Mk.IV',na:'英',ty:'medium',fp:40,fd:'40/52',s:48,p:57,a:30,at:160,ac:387},
+  {n:'玛蒂尔达I',na:'英',ty:'heavy',fp:13,fd:'13/50',s:13,p:26,a:60,at:39,ac:332},
+  {n:'玛蒂尔达II',na:'英',ty:'heavy',fp:40,fd:'40/52',s:25,p:53,a:78,at:160,ac:520},
+  {n:'十字军',na:'英',ty:'medium',fp:57,fd:'57/43',s:43,p:110,a:51,at:324,ac:447},
+  {n:'瓦伦丁',na:'英',ty:'heavy',fp:57,fd:'57/43',s:24,p:110,a:65,at:324,ac:413},
+  {n:'格兰特',na:'英',ty:'medium',fp:75,fd:'75/37',s:42,p:90,a:51,at:490,ac:520},
+  // 英国 · 帝国黄昏
+  {n:'克伦威尔',na:'英',ty:'medium',fp:75,fd:'75/39',s:64,p:91,a:76,at:562,ac:529},
+  {n:'挑战者',na:'英',ty:'medium',fp:76,fd:'76/55',s:51,p:264,a:63,at:577,ac:566},
+  {n:'彗星',na:'英',ty:'medium',fp:77,fd:'77/49',s:51,p:145,a:102,at:592,ac:574},
+  {n:'丘吉尔Mk.VIII',na:'英',ty:'heavy',fp:95,fd:'95/24',s:20,p:220,a:152,at:902,ac:632},
+  {n:'黑王子',na:'英',ty:'heavy',fp:76,fd:'76/55',s:18,p:274,a:152,at:577,ac:707},
+  {n:'百夫长',na:'英',ty:'medium',fp:76,fd:'76/55',s:35,p:274,a:152,at:577,ac:714},
+  {n:'土龟',na:'英',ty:'td',fp:94,fd:'94/47',s:19,p:300,a:228,at:883,ac:883},
+];
+ENEMY_RAW.forEach(t => { if(!TANKS[t.n]) TANKS[t.n] = t; });
+
+const ENEMY_TREES = {
+  法: {
+    'R35':{lv:5}, 'FCM36':{lv:5}, 'H35':{lv:5},
+    'H39':{lv:5.5}, 'R40':{lv:5.5},
+    'D2':{lv:6.5}, 'S35':{lv:6.5},
+    'S40':{lv:7}, 'AMX38':{lv:7},
+    'B1bis':{lv:9}, '夏尔2C':{lv:9.5}, 'FCMF1':{lv:13},
+  },
+  波: { 'TK-3':{lv:1}, 'TKS':{lv:1}, 'TKS-D':{lv:2.5}, '7TP':{lv:5.5} },
+  英: {
+    '维克斯Mk.VI':{lv:1.5},
+    '玛蒂尔达I':{lv:1.5},
+    '巡洋Mk.II':{lv:5.5},
+    '巡洋Mk.IV':{lv:6},
+    '瓦伦丁':{lv:8},
+    '十字军':{lv:8},
+    '玛蒂尔达II':{lv:8},
+    '格兰特':{lv:10},
+    '克伦威尔':{lv:11},
+    '挑战者':{lv:12},
+    '彗星':{lv:12},
+    '丘吉尔Mk.VIII':{lv:12.5},
+    '黑王子':{lv:13},
+    '百夫长':{lv:13.5},
+    '土龟':{lv:14},
+  },
+  美: {
+    'M5':{lv:7}, 'M3中坦':{lv:8}, 'M4谢尔曼':{lv:10},
+    'M4A3E8':{lv:11.5}, 'M26潘兴':{lv:13.5},
+    'T29':{lv:14}, 'T30':{lv:14.5}, 'T28':{lv:14.5}, 'M6A2E1':{lv:14.5},
+    'T32':{lv:15}, 'T34':{lv:15}, 'T26E4超潘':{lv:15},
+  },
+  苏: {
+    't-50A':{lv:7}, 't-34/76-40':{lv:7.5}, 'ZIS-30':{lv:7.5},
+    't-80':{lv:8}, 't-34/76-41':{lv:8.5}, 'SU-76M':{lv:8.5},
+    'SU-122':{lv:9}, 't-34/76E':{lv:9}, 't-34/57-41':{lv:9}, 'KV-1-39':{lv:9},
+    'SU-85':{lv:9.5},
+    'KV-1-42':{lv:10}, 'SU-85M':{lv:10},
+    't-34/85-43':{lv:10.5},
+    't-43':{lv:11}, 'KV-1-E':{lv:11}, 'KV-1-S':{lv:11},
+    'KV-13':{lv:11.5}, 'SU-100':{lv:11.5}, 'SU-152':{lv:11.5},
+    'KV-85':{lv:12}, 't-34/85-45':{lv:12},
+    'KV-2':{lv:12.5}, 'IS-1':{lv:12.5}, 'SU-100Y':{lv:12.5},
+    'IS-2':{lv:13}, 'KV-3':{lv:13}, 'ISU-122':{lv:13},
+    'IS-3':{lv:14},
+    'IS-4':{lv:15}, 'ISU-152':{lv:15}, 't-44B':{lv:15},
+  },
+};
+
+// ===== 国家名 + 配色 =====
+const NAT_NAME = {德:'德国',美:'美国',苏:'苏联',法:'法国',波:'波兰',英:'英国'};
 const NAT_COLOR = {
   德:{c1:'rgba(255,215,110,.18)',c2:'rgba(255,215,110,.03)',c:'#ffd76e'},
   美:{c1:'rgba(77,208,255,.18)',c2:'rgba(77,208,255,.03)',c:'#4dd0ff'},
-  苏:{c1:'rgba(255,77,77,.18)',c2:'rgba(255,77,77,.03)',c:'#ff6b6b'}
+  苏:{c1:'rgba(255,77,77,.18)',c2:'rgba(255,77,77,.03)',c:'#ff6b6b'},
+  法:{c1:'rgba(77,157,255,.18)',c2:'rgba(77,157,255,.03)',c:'#4d9dff'},
+  波:{c1:'rgba(230,230,230,.18)',c2:'rgba(230,230,230,.03)',c:'#e0e8e0'},
+  英:{c1:'rgba(200,168,128,.18)',c2:'rgba(200,168,128,.03)',c:'#c8a880'},
 };
+
+const TY_CN = {light:'轻坦',medium:'中坦',heavy:'重坦',td:'坦歼'};
+const TY_ICON = {light:'⚡',medium:'🔫',heavy:'🛡️',td:'🎯'};
 
 const STG = [{n:'3km',d:3000},{n:'2km',d:2000},{n:'1km',d:1000},{n:'100m',d:100},{n:'0m',d:0}];
 const RNG = fp => fp <= 50 ? 1000 : fp <= 100 ? 2000 : 3000;
@@ -148,7 +243,60 @@ const ELITE_TANKS = {
 };
 const ELITE_PRICES = { 'E-100':3000, 'IS-7':2800, 'T95':2600, '猎虎88':2800, 'T-44/100':2400, 'M26E5':2200 };
 
-const VERSION = '0.4.2';
+// ===== 历史战役配置 =====
+const CAMPAIGN_CHAPTERS = {
+  德: [
+    { id:'poland',      name:'波兰战役',   date:'1939.9',         levels:[1,2,3,4,5],      status:'ready' },
+    { id:'france',      name:'法国战役',   date:'1940.5',         levels:[6,7,8,9,10],     status:'ready' },
+    { id:'northAfrica', name:'北非战役',   date:'1941.2-1943.5',  levels:[11,12,13,14,15], status:'ready' },
+    { id:'barbarossa',  name:'巴巴罗萨',   date:'1941.6-1941.12', levels:[16,17,18,19,20], status:'ready' },
+    { id:'kursk',       name:'库尔斯克',   date:'1943.7',         levels:[21,22,23,24,25], status:'ready' },
+    { id:'empireDusk',  name:'帝国黄昏',   date:'1944.6-1945.4',  levels:[26,27,28,29,30], status:'ready' },
+  ],
+};
+
+const LEVEL_CONFIG = {
+  德: {
+    // 波兰战役
+    1:  { name:'边境突破',     enemyNation:'波', modifiers:{ enemyLvMod:-1 } },
+    2:  { name:'走廊之战',     enemyNation:'波', modifiers:{ initiative:'player' } },
+    3:  { name:'维斯瓦河',     enemyNation:'波', modifiers:{ startStage:1 } },
+    4:  { name:'布楚拉战役',   enemyNation:'波', modifiers:{ enemyLvMod:1 } },
+    5:  { name:'华沙陷落',     enemyNation:'波', modifiers:{ startStage:2, initiative:'player' } },
+    // 法国战役
+    6:  { name:'色当突破',     enemyNation:'法', modifiers:{ initiative:'enemy', startStage:1 } },
+    7:  { name:'默兹河桥头堡', enemyNation:'法', modifiers:{ startStage:2 } },
+    8:  { name:'敦刻尔克',     enemyNation:'法', modifiers:{ enemyCountMul:1.5, enemyLvMod:-1 } },
+    9:  { name:'魏刚防线',     enemyNation:'法', modifiers:{ maxRounds:8, victoryMode:'annihilate' } },
+    10: { name:'阿拉斯反击',   enemyNation:'法', enemyNation2:'英', modifiers:{ initiative:'enemy', enemyLvMod:1 } },
+    // 北非战役
+    11: { name:'托布鲁克之围', enemyNation:'英', theme:'desert', modifiers:{ initiative:'player' } },
+    12: { name:'加扎拉',       enemyNation:'法', enemyNation2:'英', theme:'desert', weatherTag:'sand', modifiers:{ startStage:1, floatRange:0.25 } },
+    13: { name:'托布鲁克陷落', enemyNation:'英', theme:'desert', modifiers:{ enemyCountMul:1.5, enemyLvMod:-1 } },
+    14: { name:'阿拉曼',       enemyNation:'英', theme:'desert', modifiers:{ maxRounds:8, victoryMode:'annihilate' } },
+    15: { name:'突尼斯桥头堡', enemyNation:'英', enemyNation2:'法', enemyNation3:'美', theme:'desert', modifiers:{ startStage:2, enemyLvMod:1, initiative:'enemy' } },
+    // 巴巴罗萨战役
+    16: { name:'边境突破',   enemyNation:'苏', theme:'winter', modifiers:{ enemyLvMod:-1 } },
+    17: { name:'明斯克包围', enemyNation:'苏', theme:'winter', modifiers:{ initiative:'player' } },
+    18: { name:'斯摩棱斯克', enemyNation:'苏', theme:'winter', modifiers:{ enemyLvMod:1 } },
+    19: { name:'基辅包围',   enemyNation:'苏', theme:'winter', modifiers:{ startStage:1, enemyLvMod:-1 } },
+    20: { name:'莫斯科郊外', enemyNation:'苏', theme:'winter', weatherTag:'snow', modifiers:{ startStage:2, enemyLvMod:1, atkMod:-0.15 } },
+    // 库尔斯克战役
+    21: { name:'堡垒行动',   enemyNation:'苏', theme:'steppe', weatherTag:'fog',   modifiers:{ penMod:-0.1, enemyLvMod:-1 } },
+    22: { name:'奥廖尔',     enemyNation:'苏', theme:'steppe', weatherTag:'night', modifiers:{ atkMod:-0.15, initiative:'enemy' } },
+    23: { name:'普罗霍罗夫卡', enemyNation:'苏', theme:'steppe', modifiers:{ enemyLvMod:1, floatRange:0.25 } },
+    24: { name:'库尔斯克南部', enemyNation:'苏', theme:'steppe', modifiers:{ initiative:'player', noRetreat:true } },
+    25: { name:'别尔哥罗德', enemyNation:'苏', theme:'steppe', modifiers:{ maxRounds:8, victoryMode:'annihilate' } },
+    // 帝国黄昏
+    26: { name:'诺曼底登陆', enemyNation:'美', enemyNation2:'英', theme:'ruins', weatherTag:'rain', modifiers:{ initiative:'enemy', startStage:2, penMod:-0.1 } },
+    27: { name:'卡昂',       enemyNation:'英', theme:'ruins', weatherTag:'fog', modifiers:{ atkMod:-0.15, noRetreat:true } },
+    28: { name:'法莱斯包围', enemyNation:'美', enemyNation2:'英', theme:'ruins', modifiers:{ initiative:'enemy', noRetreat:true } },
+    29: { name:'阿登反击',   enemyNation:'美', theme:'winter', weatherTag:'snow', modifiers:{ startStage:3, initiative:'player' } },
+    30: { name:'柏林',       enemyNation:'苏', theme:'ruins', weatherTag:'night', modifiers:{ enemyLvMod:1, maxRounds:10, victoryMode:'annihilate' } },
+  },
+};
+
+const VERSION = '0.5.1';
 const SAVE_KEY = 'tank_campaign_v8';
 const MAP_SAVE_KEY = 'tank_map_v7';
 const TUTORIAL_KEY = 'tank_map_tutorial_v1';

@@ -1,14 +1,28 @@
 // ============================================================
-// base.js — 基地、科技树、编队、对比、车组、图鉴
+// base.js — 基地、科技树、编队、对比、车组、图鉴、历史战役
 // ============================================================
 
 function renderBase(){
-  const cur = getCur(); const nc = NAT_COLOR[S.nation]; const slotsMax = playerSlotsMax(cur.chapter);
-  let html = `<div class="base-head">
+  const cur = getCur();
+  const nc = NAT_COLOR[S.nation];
+  const slotsMax = playerSlotsMax(cur.chapter);
+  const isHist = S.histMode === true && !!S.histChapterId;
+
+  let histPanel = '';
+  if(isHist) histPanel = renderHistChapterPanel();
+
+  const progressText = isHist
+    ? `历史战役 · 已通关 ${cur.hist.clearMax || 0} / 10`
+    : `第 ${cur.chapter} 关 / 30`;
+  const progressLabel = isHist ? '历史进度' : '关卡进度';
+  const slotMaxShow = isHist ? histPlayerSlots() : slotsMax;
+  const slotValShow = isHist ? Math.min(cur.lineup.length, histPlayerSlots()) : cur.slots;
+
+  let html = histPanel + `<div class="base-head">
     <div class="line"><span>国家</span><b style="color:${nc.c}">${NAT_NAME[S.nation]}</b></div>
     <div class="line"><span>研发点</span><span class="val" style="color:#ffd76e">${cur.rp}</span></div>
-    <div class="line"><span>关卡进度</span><span class="val">第 ${cur.chapter} 关 / 30</span></div>
-    <div class="line"><span>出战槽位</span><span class="val">${cur.slots} / ${slotsMax}</span></div>
+    <div class="line"><span>${progressLabel}</span><span class="val">${progressText}</span></div>
+    <div class="line"><span>出战槽位</span><span class="val">${slotValShow} / ${slotMaxShow}</span></div>
     <div class="tabs2">
       <button class="${S.baseTab==='base'?'act':''}" onclick="setTab('base')">🏠 基地</button>
       <button class="${S.baseTab==='tree'?'act':''}" onclick="setTab('tree')">🌳 科技树</button>
@@ -20,16 +34,18 @@ function renderBase(){
     </div>
   </div>`;
   if(S.baseTab === 'base'){
-    html += `<div class="panel"><h3>出战编队 (${cur.lineup.length}/${cur.slots})</h3>
-      ${cur.lineup.length ? cur.lineup.map((i)=>{ const t = cur.tank[i]; if(!t) return ''; return `<span class="tank-chip sel">${tankNameHTML(t.n, (TANKS[t.n]||{}).ty, t.exp, {icon:false})}</span>`; }).join('') : '<div style="color:#5a6a5a;font-size:12px">未设置</div>'}
+    html += `<div class="panel"><h3>出战编队 (${cur.lineup.length}/${slotMaxShow})</h3>
+      ${cur.lineup.length ? cur.lineup.slice(0, slotMaxShow).map((i)=>{ const t = cur.tank[i]; if(!t) return ''; const st = getStar(t.exp || 0); const stars = st > 0 ? ' ' + '★'.repeat(st) : ''; return `<span class="tank-chip sel"><span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span></span>`; }).join('') : '<div style="color:#5a6a5a;font-size:12px">未设置</div>'}
     </div>`;
     html += `<div class="panel"><h3>已拥有坦克 (${cur.tank.length}/60) · 点击看详情</h3>${cur.tank.length ? renderTankList() : '<div style="color:#5a6a5a;font-size:12px">暂无</div>'}</div>`;
     html += renderCrewSection(false);
-    html += `<div class="btns" style="margin-top:auto">
-      <button class="btn pri" onclick="startChapter()" ${cur.lineup.length?'':'disabled'}>⚔ 出击 · 第 ${cur.chapter} 关</button>
-      <button class="btn" onclick="goNationSelect()">← 切换国家</button>
-      <button class="btn" onclick="goSaveSelect()">← 存档管理</button>
-    </div>`;
+    if(!isHist){
+      html += `<div class="btns" style="margin-top:auto">
+        <button class="btn pri" onclick="startChapter()" ${cur.lineup.length?'':'disabled'}>⚔ 出击 · 第 ${cur.chapter} 关</button>
+        <button class="btn" onclick="goNationSelect()">← 切换国家</button>
+        <button class="btn" onclick="goSaveSelect()">← 存档管理</button>
+      </div>`;
+    }
   } else if(S.baseTab === 'tree'){ html += renderTree(); }
   else if(S.baseTab === 'formation'){ html += renderFormation(); }
   else if(S.baseTab === 'tactical'){ html += renderTacticalPanel(false); }
@@ -49,9 +65,10 @@ function renderTankList(){
     const d = TANKS[t.n]; if(!d) return '';
     const exp = t.exp || 0;
     const st = getStar(exp);
+    const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
     const pct = expProgressPct(exp);
     const full = st >= 3 ? ' full' : '';
-    return `<div class="tank-chip" onclick="showTankDetail(false,${i})"><span class="sell" onclick="event.stopPropagation();confirmSell(${i})">×</span>${tankNameHTML(t.n, d.ty, exp, {iconFallback: TY_ICON[d.ty]})}${barHTML(pct,'exp-bar',full)}</div>`;
+    return `<div class="tank-chip" onclick="showTankDetail(false,${i})"><span class="sell" onclick="event.stopPropagation();confirmSell(${i})">×</span>${TY_ICON[d.ty]}<span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span><div class="exp-bar${full}"><i style="width:${pct}%"></i></div></div>`;
   }).join('')}</div>`;
 }
 function confirmSell(i){
@@ -165,37 +182,69 @@ function buyAnother(name){
   persistSaves(); closeDetail(); render(); toast(`已购买 ${name}`); SFX.coin();
 }
 function renderFormation(){
-  const cur = getCur(); const sm = playerSlotsMax(cur.chapter);
-  let html = `<div class="panel"><h3>出战坦克（最多 ${cur.slots}）</h3>
+  const cur = getCur();
+  const isHist = S.histMode === true && !!S.histChapterId;
+  const slotsLimit = isHist ? histPlayerSlots() : cur.slots;
+  const sm = playerSlotsMax(cur.chapter);
+  let html = `<div class="panel"><h3>出战坦克（最多 ${slotsLimit}）</h3>
     <div class="tank-list">${cur.tank.map((t,i)=>{ const d = TANKS[t.n]; if(!d) return '';
       const sel = cur.lineup.includes(i);
-      return `<div class="tank-chip ${sel?'sel':''}" onclick="toggleLineup(${i})">${tankNameHTML(t.n, d.ty, t.exp, {iconFallback: TY_ICON[d.ty]})}</div>`;
+      const st = getStar(t.exp || 0);
+      const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
+      return `<div class="tank-chip ${sel?'sel':''}" onclick="toggleLineup(${i})">${TY_ICON[d.ty]}<span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span></div>`;
     }).join('')}</div>
-    <div style="font-size:12px;color:#8ab88a;margin-top:8px">已选 ${cur.lineup.length}/${cur.slots}</div></div>
+    <div style="font-size:12px;color:#8ab88a;margin-top:8px">已选 ${cur.lineup.length}/${slotsLimit}</div></div>
   <div class="panel"><h3>出战槽位</h3><div class="slotbar">`;
-  for(let i=1;i<=6;i++){
-    if(i <= cur.slots) html += `<div class="slot filled">✓</div>`;
-    else if(i > sm){ html += `<div class="slot locked">🔒</div>`; }
-    else html += `<div class="slot buy" onclick="buySlot(${i})">${slotCost(i)}</div>`;
+  if(isHist){
+    for(let i=1;i<=6;i++){
+      if(i <= slotsLimit) html += `<div class="slot filled">✓</div>`;
+      else html += `<div class="slot locked">🔒</div>`;
+    }
+  } else {
+    for(let i=1;i<=6;i++){
+      if(i <= cur.slots) html += `<div class="slot filled">✓</div>`;
+      else if(i > sm){ html += `<div class="slot locked">🔒</div>`; }
+      else html += `<div class="slot buy" onclick="buySlot(${i})">${slotCost(i)}</div>`;
+    }
   }
   html += `</div></div><div class="btns" style="margin-top:auto"><button class="btn pri" onclick="setTab('base')">✓ 完成</button></div>`;
   return html;
 }
-function toggleLineup(i){ const cur = getCur(); const idx = cur.lineup.indexOf(i); if(idx >= 0) cur.lineup.splice(idx, 1); else if(cur.lineup.length < cur.slots) cur.lineup.push(i); else { toast('已满员'); return; } persistSaves(); render(); }
+function toggleLineup(i){
+  const cur = getCur();
+  const isHist = S.histMode === true && !!S.histChapterId;
+  const limit = isHist ? histPlayerSlots() : cur.slots;
+  const idx = cur.lineup.indexOf(i);
+  if(idx >= 0) cur.lineup.splice(idx, 1);
+  else if(cur.lineup.length < limit) cur.lineup.push(i);
+  else { toast(`已满员（${limit} 槽）`); return; }
+  persistSaves(); render();
+}
 function buySlot(n){ const cur = getCur(); const c = slotCost(n); if(cur.rp < c || n !== cur.slots + 1) return; cur.rp -= c; cur.slots = n; persistSaves(); render(); toast(`已解锁槽位 ${n}`); }
 
 function renderTacticalPanel(isMap){
   const cur = isMap ? getMapCur() : getCur();
   if(!cur) return '';
-  const maxSlots = isMap ? 2 : (cur.chapter >= 15 ? 2 : cur.chapter >= 6 ? 1 : 0);
+  const isHist = !isMap && S.histMode === true;
+  let maxSlots, slots;
+  if(isMap){
+    maxSlots = 2;
+    slots = cur.tacSlots || 0;
+  } else if(isHist){
+    const cm = cur.hist.clearMax || 0;
+    maxSlots = cm >= 15 ? 2 : cm >= 5 ? 1 : 0;
+    slots = maxSlots;
+  } else {
+    maxSlots = cur.chapter >= 15 ? 2 : cur.chapter >= 6 ? 1 : 0;
+    slots = cur.tacSlots || 0;
+  }
   const unlocked = cur.tacUnlocked || [];
   const equipped = cur.tacEquipped || [];
-  const slots = cur.tacSlots || 0;
   const rp = cur.rp;
   let html = `<div class="panel"><h3>🎯 战术指令</h3>
     <div style="font-size:12px;color:#8ab88a;margin-bottom:8px">
       已开槽位：<b style="color:#ffd76e">${slots} / ${maxSlots}</b>
-      ${maxSlots === 0 ? '<br>第 6 关起可开槽位 1' : ''}
+      ${maxSlots === 0 ? (isHist ? '<br>通关第 5 关自动开 1 槽<br>通关第 15 关自动开 2 槽' : '<br>第 6 关起可开槽位 1') : ''}
     </div>`;
   if(slots < maxSlots){
     const nextSlot = slots + 1;
@@ -232,6 +281,8 @@ function renderTacticalPanel(isMap){
 function buyTacSlot(isMap){
   const cur = isMap ? getMapCur() : getCur();
   if(!cur) return;
+  const isHist = !isMap && S.histMode === true;
+  if(isHist){ toast('历史战役槽位自动开启'); return; }
   const maxSlots = isMap ? 2 : (cur.chapter >= 15 ? 2 : cur.chapter >= 6 ? 1 : 0);
   const slots = cur.tacSlots || 0;
   if(slots >= maxSlots){ toast('已达上限'); return; }
@@ -261,7 +312,12 @@ function buyTac(id, isMap){
 function toggleTacEquip(id, isMap){
   const cur = isMap ? getMapCur() : getCur();
   if(!cur) return;
-  const slots = cur.tacSlots || 0;
+  let slots;
+  if(isMap) slots = cur.tacSlots || 0;
+  else if(S.histMode === true && S.histChapterId){
+    const cm = cur.hist.clearMax || 0;
+    slots = cm >= 15 ? 2 : cm >= 5 ? 1 : 0;
+  } else slots = cur.tacSlots || 0;
   if(slots === 0){ toast('请先解锁指令槽'); return; }
   let eq = cur.tacEquipped || [];
   const idx = eq.indexOf(id);
@@ -297,7 +353,7 @@ function renderCrewSection(isMap){
       html += `<div class="crew-item">
         <div class="crew-info">
           <div class="crew-name">${stars} ${esc(c.fromTank)} 车组</div>
-          <div class="crew-exp"><span>${c.exp} 经验</span>${barHTML(pct,'exp-bar',full)}</div>
+          <div class="crew-exp"><span>${c.exp} 经验</span><div class="exp-bar${full}"><i style="width:${pct}%"></i></div></div>
         </div>
         <div class="crew-actions">
           <button class="btn ghost sm" onclick="openInstallCrew('${c.id}',${isLargeStr})">装入坦克</button>
@@ -321,7 +377,7 @@ function renderCrewSection(isMap){
       html += `<div class="crew-item">
         <div class="crew-info">
           <div class="crew-name">${stars} ${esc(t.n)}</div>
-          <div class="crew-exp"><span>${t.exp} 经验</span>${barHTML(pct,'exp-bar',full)}</div>
+          <div class="crew-exp"><span>${t.exp} 经验</span><div class="exp-bar${full}"><i style="width:${pct}%"></i></div></div>
         </div>
         <div class="crew-actions">
           <button class="btn ghost sm" onclick="detachCrew(${isLargeStr},${i})">取下车组</button>
@@ -468,7 +524,7 @@ function showTankDetail(isMap, idx){
       ★ 攻击/穿深：浮动区间收窄（期望约 +1%/星）· 速度/装甲/活度：每星 +4%
     </div>
     <div class="btns" style="margin-top:12px">
-      ${closeBtnHTML('.tk-detail-modal')}
+      <button class="btn" onclick="this.closest('.tk-detail-modal').remove()">关闭</button>
     </div>
   </div>`;
   document.body.appendChild(div);
@@ -481,7 +537,9 @@ function renderCompare(){
     ${cur.tank.length < 2 ? '<div class="cmp-tip">至少 2 辆</div>' :
       `<div class="tank-list">${cur.tank.map((t,i)=>{ const d = TANKS[t.n]; if(!d) return '';
         const sel = S.compareA === i || S.compareB === i;
-        return `<div class="tank-chip ${sel?'sel':''}" onclick="toggleCompare(${i})">${tankNameHTML(t.n, d.ty, t.exp, {iconFallback: TY_ICON[d.ty]})}</div>`;
+        const st = getStar(t.exp || 0);
+        const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
+        return `<div class="tank-chip ${sel?'sel':''}" onclick="toggleCompare(${i})">${TY_ICON[d.ty]}<span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span></div>`;
       }).join('')}</div>`}</div>`;
   if(cur.tank.length >= 2 && S.compareA != null && S.compareB != null && cur.tank[S.compareA] && cur.tank[S.compareB]){
     const ta = cur.tank[S.compareA], tb = cur.tank[S.compareB];
@@ -529,12 +587,20 @@ function getAllTankList(){
     for(const name in tree){
       const d = TANKS[name];
       if(!d) continue;
-      list.push({ n: name, nat, lv: tree[name].lv, elite: false, ref: d });
+      list.push({ n: name, nat, lv: tree[name].lv, elite: false, enemy: false, ref: d });
     }
   }
   for(const name in ELITE_TANKS){
     const d = ELITE_TANKS[name];
-    list.push({ n: name, nat: d.na, lv: 15, elite: true, ref: d });
+    list.push({ n: name, nat: d.na, lv: 15, elite: true, enemy: false, ref: d });
+  }
+  for(const nat of ['法','波','英']){
+    const tree = ENEMY_TREES[nat] || {};
+    for(const name in tree){
+      const d = TANKS[name];
+      if(!d) continue;
+      list.push({ n: name, nat, lv: tree[name].lv, elite: false, enemy: true, ref: d });
+    }
   }
   return list;
 }
@@ -545,16 +611,17 @@ function renderCodex(){
   let list = all;
   if(S.codexNat !== 'all') list = list.filter(t => t.nat === S.codexNat);
   if(S.codexTy !== 'all') list = list.filter(t => t.ref.ty === S.codexTy);
-  const ord = {德:0, 美:1, 苏:2};
+  const ord = {德:0, 美:1, 苏:2, 法:3, 波:4, 英:5};
   list.sort((a, b) => {
     if(a.nat !== b.nat) return (ord[a.nat]||0) - (ord[b.nat]||0);
     return a.lv - b.lv;
   });
-  const ownedCount = all.filter(t => owned.has(t.n)).length;
+  const ownedCount = all.filter(t => !t.enemy && owned.has(t.n)).length;
+  const ownableCount = all.filter(t => !t.enemy).length;
 
-  let html = `<div class="panel"><h3>📖 坦克图鉴 · ${ownedCount}/${all.length}</h3>
+  let html = `<div class="panel"><h3>📖 坦克图鉴 · ${ownedCount}/${ownableCount}</h3>
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
-      ${['all','德','美','苏'].map(n => `<button class="filter-btn ${S.codexNat===n?'act':''}" onclick="S.codexNat='${n}';render()">${n==='all'?'全部国家':NAT_NAME[n]}</button>`).join('')}
+      ${[['all','全部国家'],['德','德国'],['美','美国'],['苏','苏联'],['法','法国'],['波','波兰'],['英','英国']].map(([k,v]) => `<button class="filter-btn ${S.codexNat===k?'act':''}" onclick="S.codexNat='${k}';render()">${v}</button>`).join('')}
     </div>
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
       ${[['all','全部类型'],['light','轻坦'],['medium','中坦'],['heavy','重坦'],['td','坦歼']].map(([k,v]) => `<button class="filter-btn ${S.codexTy===k?'act':''}" onclick="S.codexTy='${k}';render()">${v}</button>`).join('')}
@@ -562,8 +629,11 @@ function renderCodex(){
     ${list.length ? `<div class="codex-grid">${list.map(t => {
       const isOwned = owned.has(t.n);
       const natCol = NAT_COLOR[t.nat] || {c:'#8ab88a'};
-      return `<div class="codex-card ${isOwned?'owned':''}" onclick="showCodexDetail('${esc(t.n)}')">
-        <div class="cc-lv">Lv${t.lv}${t.elite?' ⭐':''}</div>
+      const cardCls = ['codex-card'];
+      if(isOwned) cardCls.push('owned');
+      if(t.enemy) cardCls.push('enemy');
+      return `<div class="${cardCls.join(' ')}" onclick="showCodexDetail('${esc(t.n)}')">
+        <div class="cc-lv">Lv${t.lv}${t.elite?' ⭐':''}${t.enemy?' 🎯':''}</div>
         <div class="cc-icon">${TY_ICON[t.ref.ty]}</div>
         <div class="cc-name" style="color:${natCol.c}">${esc(t.n)}</div>
         <div class="cc-ty">${TY_CN[t.ref.ty]}</div>
@@ -579,11 +649,20 @@ function showCodexDetail(name){
   const cur = getCur();
   const owned = (cur.tank || []).some(t => t.n === name);
   const isElite = !!ELITE_TANKS[name];
+  const isEnemy = ['法','波','英'].includes(d.na);
   let lv = 15;
   for(const nat of ['德','美','苏']){
     if(TREES[nat][name]){ lv = TREES[nat][name].lv; break; }
   }
+  if(isEnemy){
+    for(const nat of ['法','波','英']){
+      if(ENEMY_TREES[nat] && ENEMY_TREES[nat][name]){ lv = ENEMY_TREES[nat][name].lv; break; }
+    }
+  }
   const rng = d.fp <= 50 ? '1km' : d.fp <= 100 ? '2km' : '3km';
+  const ownText = isEnemy
+    ? '<span style="color:#ff9c9c">🎯 敌方专属</span>'
+    : (owned ? '<span style="color:#7bff7b">已拥有</span>' : '<span style="color:#5a6a5a">未拥有</span>');
   document.querySelectorAll('.tk-detail-modal').forEach(el => el.remove());
   const div = document.createElement('div');
   div.className = 'tk-detail-modal';
@@ -591,7 +670,7 @@ function showCodexDetail(name){
   div.innerHTML = `<div class="tk-detail-card">
     <h3>${isElite?'⭐':''}${TY_ICON[d.ty]} ${esc(name)} ${TY_CN[d.ty]} Lv${lv}</h3>
     <div style="font-size:11px;color:#8ab88a;margin-bottom:10px">
-      ${NAT_NAME[d.na]||d.na} · ${owned?'<span style="color:#7bff7b">已拥有</span>':'<span style="color:#5a6a5a">未拥有</span>'}
+      ${NAT_NAME[d.na]||d.na} · ${ownText}
     </div>
     <div class="tk-detail-stats">
       <div class="row"><span>火力</span><b>${d.fd}</b></div>
@@ -605,15 +684,19 @@ function showCodexDetail(name){
       射程：${rng}${d.heat?'<br>* 破甲弹：穿深不随距离衰减':''}
     </div>
     <div class="btns" style="margin-top:12px">
-      ${closeBtnHTML('.tk-detail-modal')}
+      <button class="btn" onclick="this.closest('.tk-detail-modal').remove()">关闭</button>
     </div>
   </div>`;
   document.body.appendChild(div);
 }
 
 function renderSettings(){
+  const vp = Math.round(SFX.volume * 100);
   return `<div class="panel"><h3>⚙️ 设置</h3>
-  ${settingsRowsHTML()}
+    <div class="settings-row"><span class="lbl">音效</span><div class="toggle ${SFX.enabled?'on':''}" onclick="toggleSfx()"></div></div>
+    <div class="settings-row"><span class="lbl">音量</span><input type="range" class="vol-slider" min="0" max="100" value="${vp}" oninput="setSfxVolume(this.value)" ${SFX.enabled?'':'disabled'}><span class="vol-val" id="volVal">${vp}%</span></div>
+    <div class="settings-row"><span class="lbl">战斗倍速（跨战斗）</span><div class="toggle ${BATTLE_SPEED?'on':''}" onclick="toggleBattleSpeed()"></div></div>
+    <div class="settings-row"><span class="lbl">战斗自动（跨战斗）</span><div class="toggle ${AUTO_BATTLE_CONTINUOUS?'on':''}" onclick="toggleAutoContinuous()"></div></div>
   </div>
   <div class="btns" style="margin-top:auto"><button class="btn" onclick="setTab('base')">← 返回基地</button></div>`;
 }
@@ -657,4 +740,266 @@ function generateEnemyTeam(chapter, diff){
   const slots = aiSlots(chapter); const team = []; const used = new Set();
   for(let i = 0; i < slots; i++){ let n, tr = 0; do { n = pickAITank(tl); tr++; } while(used.has(n) && tr < 20); used.add(n); team.push(n); }
   return team;
+}
+
+// ============================================================
+// 历史战役
+// ============================================================
+
+function histPlayerSlots(){
+  const cur = getCur();
+  if(!cur) return 2;
+  const cm = cur.hist.clearMax || 0;
+  if(cm < 5) return 2;
+  if(cm < 10) return 3;
+  if(cm < 15) return 4;
+  if(cm < 20) return 5;
+  return 6;
+}
+function histEnemyCount(level, config){
+  const chapter = getHistChapterByLevel(level);
+  if(!chapter) return 1;
+  const idx = chapter.levels.indexOf(level);
+  const table = { poland:[1,2,2,2,3], france:[2,2,3,3,4], northAfrica:[3,3,4,4,5], barbarossa:[4,5,5,5,6], kursk:[5,6,6,6,6], empireDusk:[6,6,6,6,6] }[chapter.id];
+  let base = (table && table[idx] != null) ? table[idx] : 1;
+  const mul = (config.modifiers && config.modifiers.enemyCountMul) || 1;
+  if(mul !== 1) base = Math.max(1, Math.round(base * mul));
+  return Math.min(6, base);
+}
+
+function generateHistoricalEnemyTeam(level, diff, config){
+  const lvBase = aiStandardLevel(level);
+  const off = diff === 'easy' ? -1 : diff === 'hard' ? 1 : 0;
+  const lvMod = (config.modifiers && config.modifiers.enemyLvMod) || 0;
+  const tl = Math.max(1, Math.min(15, lvBase + off + lvMod));
+  const count = histEnemyCount(level, config);
+
+  const nations = [config.enemyNation];
+  if(config.enemyNation2) nations.push(config.enemyNation2);
+  if(config.enemyNation3) nations.push(config.enemyNation3);
+  const pool = [];
+  for(const nat of nations){
+    const tree = ENEMY_TREES[nat] || {};
+    for(const name in tree) pool.push({ name, lv: tree[name].lv });
+  }
+  if(pool.length === 0) return generateEnemyTeam(level, diff);
+
+  let cs = pool.filter(t => Math.abs(t.lv - tl) <= 1.5);
+  if(cs.length === 0){
+    let minD = 999;
+    for(const t of pool) minD = Math.min(minD, Math.abs(t.lv - tl));
+    cs = pool.filter(t => Math.abs(t.lv - tl) <= minD + 0.5);
+  }
+
+  const team = []; const used = new Set();
+  for(let i = 0; i < count; i++){
+    let n, tr = 0;
+    do { n = cs[Math.floor(Math.random() * cs.length)].name; tr++; }
+    while(used.has(n) && tr < 20);
+    used.add(n); team.push(n);
+  }
+  return team;
+}
+
+function getHistChapterByLevel(level){
+  const list = CAMPAIGN_CHAPTERS[S.nation] || [];
+  return list.find(ch => ch.levels.includes(level)) || null;
+}
+
+function startHistBattle(level, diff){
+  document.querySelectorAll('.diff-modal').forEach(el => el.remove());
+  const cfg = (LEVEL_CONFIG[S.nation] || {})[level];
+  if(!cfg){ toast('该关卡未配置'); return; }
+  const chapter = getHistChapterByLevel(level);
+  const cur = getCur();
+  const limit = histPlayerSlots();
+  const lineupSlice = cur.lineup.slice(0, limit);
+  const pn = lineupSlice.filter(i => cur.tank[i]).map(i => cur.tank[i].n);
+  if(pn.length === 0){ toast('请先编队'); S.screen = 'base'; render(); return; }
+  const en = generateHistoricalEnemyTeam(level, diff, cfg);
+
+  B.units = []; B.log = []; B.stats = {}; B.round = 0; B.stageIdx = 0; B.ccRound = 0;
+  B.cur = null; B.await = null; B.resolve = null; B.over = false;
+  B.result = null; B.difficulty = diff; B.uid = 0;
+  B.mode = 'historical'; B.earned = 0; B.lastStage = -1; B.mapCtx = null; B.aiCallback = null;
+  B.perfect = false; B.isFirstClear = false; B._veteranResult = null;
+  B.retreatUsedThisTurn = false; B.retreatSelect = false; B.retreatPicked = [];
+  B.auto = AUTO_BATTLE_CONTINUOUS;
+  B.modifiers = Object.assign({}, cfg.modifiers || {});
+  if(cfg.theme) B.modifiers.theme = cfg.theme;
+  B.histLevel = level;
+  B.histChapterName = chapter ? chapter.name : '';
+  initBattleBuffs();
+  const cm0 = cur.hist.clearMax || 0;
+  const histSlots = cm0 >= 15 ? 2 : cm0 >= 5 ? 1 : 0;
+  const playerEq = (cur.tacEquipped || []).slice(0, histSlots);
+  B.tactical = { playerEquipped: playerEq, playerUsed: [], enemyEquipped: [], enemyUsed: [] };
+  setupAITacticalPool(getAITacticalSlotsForBattle());
+  lineupSlice.forEach((origIdx, i) => {
+    const tank = cur.tank[origIdx];
+    if(!tank) return;
+    B.units.push(makeBattleUnit(tank.n, 'player', i, null, tank.exp || 0));
+  });
+  en.forEach((n, i) => B.units.push(makeBattleUnit(n, 'enemy', i)));
+
+  const mod = B.modifiers;
+  const startStg = (mod.startStage != null && mod.startStage >= 0 && mod.startStage <= 4) ? mod.startStage : 0;
+  B.stageIdx = startStg;
+
+  addBLog(`<span class="rd">📜 ${chapter ? chapter.name : '历史战役'} · 第 ${level} 关 · ${diff === 'easy' ? '简单' : diff === 'hard' ? '困难' : '正常'}${AUTO_BATTLE_CONTINUOUS?' · 自动':''}</span>`);
+  S.screen = 'battle'; M.screen = 'none';
+  document.documentElement.style.setProperty('--boff', '0px'); B.lastStage = -1;
+  render(); setTimeout(runBattle, 500);
+}
+
+function renderHistChapters(){
+  const cur = getCur();
+  const chapters = CAMPAIGN_CHAPTERS[S.nation] || [];
+  const cm = cur.hist.clearMax || 0;
+  let html = `<h1>📜 历史战役 · ${NAT_NAME[S.nation]}</h1>
+  <div class="sub">进度：已通关 ${cm} / 10 关</div>
+  <div class="panel" style="padding:0">`;
+  if(chapters.length === 0){
+    html += `<div style="text-align:center;padding:24px;color:#8ab88a">该国家历史战役尚未开放</div>`;
+  } else {
+    chapters.forEach(ch => {
+      const isReady = ch.status === 'ready';
+      const chStart = ch.levels[0];
+      const isUnlocked = isReady && (chStart === 1 || cm >= chStart - 1);
+      const chDone = ch.levels.every(l => l <= cm);
+      const cls = ['hist-chapter'];
+      if(!isReady) cls.push('wip');
+      else if(!isUnlocked) cls.push('locked');
+      else if(chDone) cls.push('done');
+      const status = !isReady ? '⚙ 开发中' : (!isUnlocked ? '🔒 未解锁' : (chDone ? '✅ 已通关' : `进度 ${Math.max(0, Math.min(5, cm - chStart + 1))} / 5`));
+      const onclick = isUnlocked ? `onclick="pickHistChapter('${ch.id}')"` : '';
+      html += `<div class="${cls.join(' ')}" ${onclick}>
+        <div class="hc-info">
+          <div class="hc-name">${ch.name}</div>
+          <div class="hc-date">${ch.date}</div>
+        </div>
+        <div class="hc-status">${status}</div>
+      </div>`;
+    });
+  }
+  html += `</div>
+  <div class="btns" style="margin-top:auto">
+    <button class="btn" onclick="goNationSelect()">← 切换国家</button>
+    <button class="btn" onclick="backMain()">← 主菜单</button>
+  </div>`;
+  return html;
+}
+
+function pickHistChapter(id){
+  S.histChapterId = id;
+  S.histMode = true;
+  S.baseTab = 'base';
+  S.screen = 'base';
+  render();
+}
+
+function renderHistChapterPanel(){
+  const cur = getCur();
+  const chapter = (CAMPAIGN_CHAPTERS[S.nation] || []).find(ch => ch.id === S.histChapterId);
+  if(!chapter) return '';
+  const cm = cur.hist.clearMax || 0;
+  const cfg0 = (LEVEL_CONFIG[S.nation] || {})[chapter.levels[0]] || {};
+  const enemies = [cfg0.enemyNation, cfg0.enemyNation2, cfg0.enemyNation3].filter(Boolean).map(n => NAT_NAME[n]).join(' + ');
+  let html = `<div class="panel" style="margin-top:0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:800;color:#9cd4ff">📜 ${chapter.name}</div>
+        <div style="font-size:11px;color:#8ab88a;margin-top:2px">${chapter.date} · 敌军：${enemies || '—'}</div>
+      </div>
+      <button class="btn ghost sm" onclick="exitHistChapter()">← 章节</button>
+    </div>
+    <div class="hist-levels">`;
+  chapter.levels.forEach(lv => {
+    const isCleared = lv <= cm;
+    const isUnlocked = lv === 1 || cm >= lv - 1;
+    const cfg = (LEVEL_CONFIG[S.nation] || {})[lv] || {};
+    const mods = cfg.modifiers || {};
+    const tags = [];
+    if(cfg.weatherTag){
+      const wi = { sand:'🌫️', snow:'❄️', rain:'🌧️', fog:'🌫️', night:'🌙' }[cfg.weatherTag] || '⚠';
+      tags.push(wi);
+    }
+    if(mods.initiative === 'player') tags.push('⚡');
+    if(mods.initiative === 'enemy') tags.push('💨');
+    if(mods.startStage === 1) tags.push('📍2km');
+    if(mods.startStage === 2) tags.push('📍1km');
+    if(mods.startStage === 3) tags.push('📍100m');
+    if(mods.noRetreat) tags.push('🚫');
+    if(mods.enemyLvMod) tags.push(`Lv${mods.enemyLvMod>0?'+':''}${mods.enemyLvMod}`);
+    if(mods.enemyCountMul > 1) tags.push(`×${mods.enemyCountMul}`);
+    if(mods.maxRounds) tags.push(`⏱${mods.maxRounds}`);
+    if(mods.atkMod) tags.push(`⚔${Math.round(mods.atkMod*100)}%`);
+    if(mods.penMod) tags.push(`穿${Math.round(mods.penMod*100)}%`);
+    if(mods.floatRange) tags.push(`🎲±${Math.round(mods.floatRange*100)}%`);
+    const cls = ['hist-level'];
+    if(isCleared) cls.push('cleared');
+    else if(!isUnlocked) cls.push('locked');
+    const onclick = isUnlocked ? `onclick="openHistDiffModal(${lv})"` : '';
+    const lvName = cfg.name || '';
+    html += `<div class="${cls.join(' ')}" ${onclick}>
+      <div class="hl-num">第 ${lv} 关</div>
+      <div class="hl-name">${lvName}</div>
+      <div class="hl-tags">${tags.join(' ') || '普通战'}</div>
+      ${isCleared ? '<div class="hl-check">✅</div>' : (!isUnlocked ? '<div class="hl-lock">🔒</div>' : '')}
+    </div>`;
+  });
+  html += `</div></div>`;
+  return html;
+}
+
+function exitHistChapter(){
+  S.histMode = false;
+  S.histChapterId = null;
+  S.screen = 'histChapters';
+  render();
+}
+
+function openHistDiffModal(level){
+  document.querySelectorAll('.diff-modal').forEach(el => el.remove());
+  const cfg = (LEVEL_CONFIG[S.nation] || {})[level];
+  if(!cfg){ toast('未配置'); return; }
+  const chapter = getHistChapterByLevel(level);
+  const mod = cfg.modifiers || {};
+  const teams = {
+    easy: generateHistoricalEnemyTeam(level, 'easy', cfg),
+    normal: generateHistoricalEnemyTeam(level, 'normal', cfg),
+    hard: generateHistoricalEnemyTeam(level, 'hard', cfg),
+  };
+  function tl(d){ return teams[d].map(n => TY_ICON[(TANKS[n] && TANKS[n].ty) || 'light'] + n).join(' · '); }
+  const wt = cfg.weatherTag || null;
+  const wtIcon = { sand:'🌫️', snow:'❄️', rain:'🌧️', fog:'🌫️', night:'🌙' }[wt] || '';
+  const wtName = { sand:'沙暴', snow:'严寒', rain:'暴雨', fog:'迷雾', night:'夜战' }[wt] || '';
+  const rules = [];
+  if(mod.atkMod) rules.push(`${wtIcon || '⚠'} ${wtName || '修正'} · 攻击 ${mod.atkMod > 0 ? '+' : ''}${Math.round(mod.atkMod * 100)}%`);
+  if(mod.penMod) rules.push(`穿深 ${mod.penMod > 0 ? '+' : ''}${Math.round(mod.penMod * 100)}%`);
+  if(mod.floatRange) rules.push(`${wtIcon || '🎲'} ${wtName || '混乱'} · 浮动 ±${Math.round(mod.floatRange * 100)}%`);
+  if(mod.initiative === 'player') rules.push('⚡ 我方先手');
+  if(mod.initiative === 'enemy') rules.push('💨 敌方先手');
+  if(mod.startStage === 1) rules.push('📍 开局 2km');
+  if(mod.startStage === 2) rules.push('📍 开局 1km');
+  if(mod.startStage === 3) rules.push('📍 开局 100m');
+  if(mod.noRetreat) rules.push('🚫 无法撤退');
+  if(mod.enemyLvMod > 0) rules.push(`⬆ 敌军 Lv+${mod.enemyLvMod}`);
+  if(mod.enemyLvMod < 0) rules.push(`⬇ 敌军 Lv${mod.enemyLvMod}`);
+  if(mod.enemyCountMul > 1) rules.push(`👥 敌军 ×${mod.enemyCountMul}`);
+  if(mod.maxRounds) rules.push(`⏱ 限时 ${mod.maxRounds} 回合`);
+  const enemies = [cfg.enemyNation, cfg.enemyNation2, cfg.enemyNation3].filter(Boolean).map(n => NAT_NAME[n]).join(' + ');
+  const lvName = cfg.name || '';
+  const div = document.createElement('div'); div.className = 'diff-modal';
+  div.onclick = e => { if(e.target === div) div.remove(); };
+  div.innerHTML = `<div class="diff-card">
+    <h3>📜 ${chapter ? chapter.name : ''} · 第 ${level} 关${lvName ? ' · ' + lvName : ''}</h3>
+    <div class="sub2">${chapter ? chapter.date + ' · ' : ''}敌军：${enemies}</div>
+    ${rules.length ? `<div class="hist-rules">${rules.map(r => `<span>${r}</span>`).join('')}</div>` : ''}
+    <button class="diff-btn easy" onclick="startHistBattle(${level},'easy')"><div><div class="dname">简单</div><div class="dinfo">奖励 ×1.0</div><div style="font-size:10px;color:#a0b8a0">${tl('easy')}</div></div></button>
+    <button class="diff-btn normal" onclick="startHistBattle(${level},'normal')"><div><div class="dname">正常</div><div class="dinfo">奖励 ×1.1</div><div style="font-size:10px;color:#a0b8a0">${tl('normal')}</div></div></button>
+    <button class="diff-btn hard" onclick="startHistBattle(${level},'hard')"><div><div class="dname">困难</div><div class="dinfo">奖励 ×1.35</div><div style="font-size:10px;color:#a0b8a0">${tl('hard')}</div></div></button>
+    <button class="btn" style="width:100%;margin-top:6px" onclick="this.closest('.diff-modal').remove()">取消</button>
+  </div>`;
+  document.body.appendChild(div);
 }

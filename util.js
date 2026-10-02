@@ -168,47 +168,55 @@ function getTacticalMods(att, def){
   }
   return { atkMul, penMul, defArmorMul, dmgTakenMul };
 }
-function pierceMul(fp, df){
-  return fp <= 50
-    ? (df <= 0 ? 1 : df <= 5 ? 0.5 : df <= 10 ? 0.25 : 0.125)
-    : (df <= 0 ? 1 : df <= 10 ? 0.5 : df <= 20 ? 0.25 : 0.125);
-}
-function damageCore(o){
-  const armor = o.armor || 0;
-  let ar = armor;
-  if(o.km === 0 && o.cc >= 1) ar = ar * Math.pow(0.5, o.cc - 1);
-  const epBase = o.heat ? o.p : o.p * (1 - 0.15 * o.km);
-  const ep = epBase * (o.penMul != null ? o.penMul : 1);
-  const df = ar - ep;
-  const m = pierceMul(o.fp, df);
-  const dmg = Math.max(1, Math.round(o.at * (o.atkMul != null ? o.atkMul : 1) * m * (o.dmgTakenMul != null ? o.dmgTakenMul : 1)));
-  return { armorEff: ar, effPen: ep, diff: df, mul: m, dmg };
-}
 function calcDamageDetail(att, def, dist, cc){
   if(!canAtk(att, dist)) return { dmg: 0, mul: 0 };
   const mods = getTacticalMods(att, def);
-  const vmin = att.vetMin != null ? att.vetMin : 0.9;
-  const vmax = att.vetMax != null ? att.vetMax : 1.1;
-  const r = damageCore({
-    at: att.at, p: att.p, fp: att.fp, heat: att.heat, km: dist / 1000, armor: def.a * mods.defArmorMul,
-    cc, atkMul: (vmin + Math.random() * (vmax - vmin)) * mods.atkMul,
-    penMul: (vmin + Math.random() * (vmax - vmin)) * mods.penMul, dmgTakenMul: mods.dmgTakenMul
-  });
-  return { dmg: r.dmg, mul: r.mul };
+  const cm = B.modifiers || {};
+  const cmAtk = 1 + (cm.atkMod || 0);
+  const cmPen = 1 + (cm.penMod || 0);
+  const f = cm.floatRange || 0;
+  const baseVmin = att.vetMin != null ? att.vetMin : 0.9;
+  const baseVmax = att.vetMax != null ? att.vetMax : 1.1;
+  const vmin = baseVmin - f;
+  const vmax = baseVmax + f;
+  const atkMul = (vmin + Math.random() * (vmax - vmin)) * mods.atkMul * cmAtk;
+  const penMul = (vmin + Math.random() * (vmax - vmin)) * mods.penMul * cmPen;
+  let ar = def.a * mods.defArmorMul;
+  if(dist === 0 && cc >= 1) ar = ar * Math.pow(0.5, cc - 1);
+  const km = dist / 1000;
+  const epBase = att.heat ? att.p : att.p * (1 - 0.15 * km);
+  const ep = epBase * penMul;
+  const df = ar - ep;
+  let m;
+  if(att.fp <= 50) m = df <= 0 ? 1 : df <= 5 ? 0.5 : df <= 10 ? 0.25 : 0.125;
+  else m = df <= 0 ? 1 : df <= 10 ? 0.5 : df <= 20 ? 0.25 : 0.125;
+  return { dmg: Math.max(1, Math.round(att.at * atkMul * m * mods.dmgTakenMul)), mul: m };
 }
 function calcDamage(att, def, dist, cc){ return calcDamageDetail(att, def, dist, cc).dmg; }
 function calcDamageRange(att, def, dist, cc){
   if(!canAtk(att, dist)) return { min: 0, max: 0 };
   const mods = getTacticalMods(att, def);
-  const vmin = att.vetMin != null ? att.vetMin : 0.9;
-  const vmax = att.vetMax != null ? att.vetMax : 1.1;
+  const cm = B.modifiers || {};
+  const cmAtk = 1 + (cm.atkMod || 0);
+  const cmPen = 1 + (cm.penMod || 0);
+  const f = cm.floatRange || 0;
+  const baseVmin = att.vetMin != null ? att.vetMin : 0.9;
+  const baseVmax = att.vetMax != null ? att.vetMax : 1.1;
+  const vmin = baseVmin - f;
+  const vmax = baseVmax + f;
+  let ar = def.a * mods.defArmorMul;
+  if(dist === 0 && cc >= 1) ar = ar * Math.pow(0.5, cc - 1);
+  const km = dist / 1000;
+  const epBase = att.heat ? att.p : att.p * (1 - 0.15 * km);
   let minD = Infinity, maxD = 0;
-  for(const aMul of [vmin, vmax]){
-    for(const pMul of [vmin, vmax]){
-      const d = damageCore({
-        at: att.at, p: att.p, fp: att.fp, heat: att.heat, km: dist / 1000, armor: def.a * mods.defArmorMul,
-        cc, atkMul: aMul * mods.atkMul, penMul: pMul * mods.penMul, dmgTakenMul: mods.dmgTakenMul
-      }).dmg;
+  for(const aMul0 of [vmin, vmax]){
+    for(const pMul0 of [vmin, vmax]){
+      const ep = epBase * pMul0 * cmPen;
+      const df = ar - ep;
+      let m;
+      if(att.fp <= 50) m = df <= 0 ? 1 : df <= 5 ? 0.5 : df <= 10 ? 0.25 : 0.125;
+      else m = df <= 0 ? 1 : df <= 10 ? 0.5 : df <= 20 ? 0.25 : 0.125;
+      const d = Math.max(1, Math.round(att.at * aMul0 * cmAtk * mods.atkMul * m * mods.dmgTakenMul));
       if(d < minD) minD = d;
       if(d > maxD) maxD = d;
     }
@@ -316,11 +324,3 @@ function toggleSfx(){ if(!SFX.enabled){ SFX.init(); SFX.resume(); SFX.enabled = 
 function setSfxVolume(v){ SFX.volume = v / 100; saveSettings(); const el = document.getElementById('volVal'); if(el) el.textContent = Math.round(v) + '%'; }
 function toggleBattleSpeed(){ BATTLE_SPEED = !BATTLE_SPEED; saveSettings(); render(); }
 function toggleAutoContinuous(){ AUTO_BATTLE_CONTINUOUS = !AUTO_BATTLE_CONTINUOUS; saveSettings(); render(); }
-
-function settingsRowsHTML(){
-  const vp = Math.round(SFX.volume * 100);
-  return `<div class="settings-row"><span class="lbl">音效</span><div class="toggle ${SFX.enabled?'on':''}" onclick="toggleSfx()"></div></div>
-    <div class="settings-row"><span class="lbl">音量</span><input type="range" class="vol-slider" min="0" max="100" value="${vp}" oninput="setSfxVolume(this.value)" ${SFX.enabled?'':'disabled'}><span class="vol-val" id="volVal">${vp}%</span></div>
-    <div class="settings-row"><span class="lbl">战斗倍速（跨战斗）</span><div class="toggle ${BATTLE_SPEED?'on':''}" onclick="toggleBattleSpeed()"></div></div>
-    <div class="settings-row"><span class="lbl">战斗自动（跨战斗）</span><div class="toggle ${AUTO_BATTLE_CONTINUOUS?'on':''}" onclick="toggleAutoContinuous()"></div></div>`;
-}

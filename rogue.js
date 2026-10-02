@@ -529,18 +529,19 @@ function renderRogueTeamChip(t){
   const d = TANKS[t.n] || ELITE_TANKS[t.n];
   if(!d) return '';
   const st = getStar(t.exp || 0);
+  const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
   const hpPct = Math.round(t.hp / t.maxHp * 100);
   const hpCls = hpPct < 30 ? 'low' : hpPct < 70 ? 'mid' : '';
   const expPct = expProgressPct(t.exp || 0);
   const expFull = st >= 3 ? ' full' : '';
   return `<div class="rogue-team-chip">
     <div class="rtc-header">
-      ${tankNameHTML(t.n, d.ty, t.exp, {icon:false, star: st})}
+      <span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span>
       <span class="rtc-hp">${t.hp}/${t.maxHp}</span>
     </div>
     <div class="rtc-bars">
-      ${barHTML(hpPct,'mini-hp'+(hpCls?' '+hpCls:''))}
-      ${barHTML(expPct,'exp-bar',expFull)}
+      <div class="mini-hp ${hpCls}"><i style="width:${hpPct}%"></i></div>
+      <div class="exp-bar${expFull}"><i style="width:${expPct}%"></i></div>
     </div>
   </div>`;
 }
@@ -574,19 +575,25 @@ function openRogueTeamModal(){
   const activeHTML = RG.active.length > 0
     ? `<div class="tank-list">${RG.active.map((t) => {
         const d = TANKS[t.n] || ELITE_TANKS[t.n]; if(!d) return '';
-        return `<div class="tank-chip sel" onclick="moveRogueTank('${t.tankUid}','bench')">${tankNameHTML(t.n, d.ty, t.exp, {icon:false})} ×</div>`;
+        const st = getStar(t.exp || 0);
+        const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
+        return `<div class="tank-chip sel" onclick="moveRogueTank('${t.tankUid}','bench')"><span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span> ×</div>`;
       }).join('')}</div>`
     : '<div class="empty-hint">没有出战坦克</div>';
   const benchHTML = RG.bench.length > 0
     ? `<div class="tank-list">${RG.bench.map((t) => {
         const d = TANKS[t.n] || ELITE_TANKS[t.n]; if(!d) return '';
-        return `<div class="tank-chip" onclick="moveRogueTank('${t.tankUid}','active')">${tankNameHTML(t.n, d.ty, t.exp, {icon:false})} ＋</div>`;
+        const st = getStar(t.exp || 0);
+        const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
+        return `<div class="tank-chip" onclick="moveRogueTank('${t.tankUid}','active')"><span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span> ＋</div>`;
       }).join('')}</div>`
     : '<div class="empty-hint">仓库为空</div>';
   const deadHTML = RG.dead.length > 0
     ? `<div class="tank-list">${RG.dead.map(t => {
         const d = TANKS[t.n] || ELITE_TANKS[t.n]; if(!d) return '';
-        return `<div class="tank-chip" style="cursor:default;opacity:.7;border-color:#5a2a2a">${tankNameHTML(t.n, d.ty, t.exp, {icon:false})}</div>`;
+        const st = getStar(t.exp || 0);
+        const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
+        return `<div class="tank-chip" style="cursor:default;opacity:.7;border-color:#5a2a2a"><span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span></div>`;
       }).join('')}</div>
       <div style="font-size:11px;color:#5a6a5a;margin-top:6px">可通过篝火、事件或商店复活</div>`
     : '<div class="empty-hint">没有阵亡坦克</div>';
@@ -844,8 +851,10 @@ function openRogueRestRevivePicker(){
   const listHTML = RG.dead.map((t, i) => {
     const d = TANKS[t.n] || ELITE_TANKS[t.n];
     if(!d) return '';
+    const st = getStar(t.exp || 0);
+    const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
     return `<div class="cm-card" onclick="restReviveTank(${i})">
-      <div class="cm-name">${tankNameHTML(t.n, d.ty, t.exp, {icon:false})}</div>
+      <div class="cm-name"><span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span></div>
       <div class="cm-desc">${t.exp || 0} 经验</div>
     </div>`;
   }).join('');
@@ -1090,7 +1099,13 @@ function startRogueBattle(nodeId){
   if(RG.active.length === 0){ toast('没有出战坦克'); return; }
   const enNames = generateRogueEnemyTeam(node.layer, node.type);
 
-  resetBattleState('rogue');
+  B.units = []; B.log = []; B.stats = {}; B.round = 0; B.stageIdx = 0; B.ccRound = 0;
+  B.cur = null; B.await = null; B.resolve = null; B.over = false;
+  B.result = null; B.difficulty = 'normal'; B.uid = 0;
+  B.mode = 'rogue'; B.earned = 0; B.lastStage = -1; B.mapCtx = null; B.aiCallback = null;
+  B.perfect = false; B.isFirstClear = false; B._veteranResult = null;
+  B.retreatUsedThisTurn = false; B.retreatSelect = false; B.retreatPicked = [];
+  B.auto = AUTO_BATTLE_CONTINUOUS;
   initBattleBuffs();
   B.tactical = { playerEquipped: RG.tacEquipped.slice(0, 2), playerUsed: [], enemyEquipped: [], enemyUsed: [] };
   setupAITacticalPool(node.type === 'boss' ? 2 : node.type === 'elite' ? 1 : 0);
@@ -1213,7 +1228,7 @@ function showRogueBattleResult(){
         : `<div class="res-card" style="margin-top:8px;border-color:#ffd76e">
              <div style="font-size:12px;color:#ffd76e;margin-bottom:8px">🎖 俘获 · 选择 1 辆加入仓库（半血）</div>
              <div class="tank-list">
-               ${capture.options.map(nm => `<div class="tank-chip" onclick="chooseRogueCapture('${esc(nm)}')">${tankNameHTML(nm, null, 0, {icon:false})}</div>`).join('')}
+               ${capture.options.map(nm => `<div class="tank-chip" onclick="chooseRogueCapture('${esc(nm)}')"><span class="tank-name" data-star="0">${esc(nm)}</span></div>`).join('')}
              </div>
            </div>`;
     }
