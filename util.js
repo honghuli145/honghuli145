@@ -9,10 +9,12 @@ function getStar(exp){
   if(!exp || exp < VET_THRESHOLD[1]) return 0;
   if(exp < VET_THRESHOLD[2]) return 1;
   if(exp < VET_THRESHOLD[3]) return 2;
-  return 3;
+  if(exp < VET_THRESHOLD[4]) return 3;
+  if(exp < VET_THRESHOLD[5]) return 4;
+  return 5;
 }
 function starToExpFloor(star){
-  return VET_THRESHOLD[Math.max(0, Math.min(3, star))] || 0;
+  return VET_THRESHOLD[Math.max(0, Math.min(5, star))] || 0;
 }
 function crewDemoteExp(exp){
   exp = Math.max(0, exp || 0);
@@ -22,19 +24,22 @@ function crewDemoteExp(exp){
   const oldFloor = starToExpFloor(oldStar);
   const surplus = Math.max(0, exp - oldFloor);
   let newExp = floor + surplus;
-  const cap = newStar < 3 ? VET_THRESHOLD[newStar + 1] - 1 : Infinity;
+  const cap = newStar < 5 ? VET_THRESHOLD[newStar + 1] - 1 : Infinity;
   return Math.max(floor, Math.min(newExp, cap));
 }
 function veteranFloat(star){
-  return VET_FLOAT[Math.max(0, Math.min(3, star))] || VET_FLOAT[0];
+  return VET_FLOAT[Math.max(0, Math.min(5, star))] || VET_FLOAT[0];
 }
 function veteranMul(star){
-  return 1 + Math.max(0, Math.min(3, star)) * VET_STAT_BONUS;
+  return 1 + Math.max(0, Math.min(5, star)) * VET_STAT_BONUS;
+}
+function veteranAtkMul(star){
+  return 1 + Math.max(0, Math.min(5, star)) * VET_ATK_BONUS;
 }
 function expProgressPct(exp){
   exp = Math.max(0, exp || 0);
   const star = getStar(exp);
-  if(star >= 3) return 100;
+  if(star >= 5) return 100;
   const curr = VET_THRESHOLD[star];
   const next = VET_THRESHOLD[star + 1];
   if(next <= curr) return 100;

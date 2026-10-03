@@ -12,7 +12,7 @@ function renderBase(){
   if(isHist) histPanel = renderHistChapterPanel();
 
   const progressText = isHist
-    ? `历史战役 · 已通关 ${cur.hist.clearMax || 0} / 10`
+    ? `历史战役 · 已通关 ${cur.hist.clearMax || 0} / 30`
     : `第 ${cur.chapter} 关 / 30`;
   const progressLabel = isHist ? '历史进度' : '关卡进度';
   const slotMaxShow = isHist ? histPlayerSlots() : slotsMax;
@@ -67,7 +67,7 @@ function renderTankList(){
     const st = getStar(exp);
     const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
     const pct = expProgressPct(exp);
-    const full = st >= 3 ? ' full' : '';
+    const full = st >= 5 ? ' full' : '';
     return `<div class="tank-chip" onclick="showTankDetail(false,${i})"><span class="sell" onclick="event.stopPropagation();confirmSell(${i})">×</span>${TY_ICON[d.ty]}<span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span><div class="exp-bar${full}"><i style="width:${pct}%"></i></div></div>`;
   }).join('')}</div>`;
 }
@@ -347,9 +347,9 @@ function renderCrewSection(isMap){
     pool.forEach(c => {
       const star = getStar(c.exp);
       const price = CREW_SELL_PRICE[star] || 0;
-      const stars = '★'.repeat(star) + '☆'.repeat(3 - star);
+      const stars = '★'.repeat(star) + '☆'.repeat(Math.max(0, 5 - star));
       const pct = expProgressPct(c.exp);
-      const full = star >= 3 ? ' full' : '';
+      const full = star >= 5 ? ' full' : '';
       html += `<div class="crew-item">
         <div class="crew-info">
           <div class="crew-name">${stars} ${esc(c.fromTank)} 车组</div>
@@ -371,9 +371,9 @@ function renderCrewSection(isMap){
   } else {
     withExp.forEach(({ t, i }) => {
       const star = getStar(t.exp);
-      const stars = '★'.repeat(star) + '☆'.repeat(3 - star);
+      const stars = '★'.repeat(star) + '☆'.repeat(Math.max(0, 5 - star));
       const pct = expProgressPct(t.exp);
-      const full = star >= 3 ? ' full' : '';
+      const full = star >= 5 ? ' full' : '';
       html += `<div class="crew-item">
         <div class="crew-info">
           <div class="crew-name">${stars} ${esc(t.n)}</div>
@@ -406,7 +406,7 @@ function openInstallCrew(crewId, isMap){
   const listHTML = tanks.map((t, i) => {
     const tExp = t.exp || 0;
     const tStar = getStar(tExp);
-    const stars = '★'.repeat(tStar) + '☆'.repeat(3 - tStar);
+    const stars = '★'.repeat(tStar) + '☆'.repeat(Math.max(0, 5 - tStar));
     const warn = tExp > 0 ? '（原车组将被覆盖）' : '';
     return `<div class="cm-card" onclick="installCrewToTank('${crewId}',${i},${isLargeStr})">
       <div class="cm-name">${stars} ${esc(t.n)}</div>
@@ -485,19 +485,20 @@ function showTankDetail(isMap, idx){
   const vetMul = veteranMul(star);
   const float = veteranFloat(star);
   const expMul = star === 0 ? 1 : (float.min + float.max) / 2;
-  const stars = '★'.repeat(star) + '☆'.repeat(3 - star);
-  const threshNext = star < 3 ? VET_THRESHOLD[star + 1] : null;
+  const atkStarMul = veteranAtkMul(star);
+  const stars = '★'.repeat(star) + '☆'.repeat(Math.max(0, 5 - star));
+  const threshNext = star < 5 ? VET_THRESHOLD[star + 1] : null;
   const expText = threshNext ? `${exp} / ${threshNext}` : `${exp}（满级）`;
   const pct = expProgressPct(exp);
-  const full = star >= 3 ? ' full' : '';
+  const full = star >= 5 ? ' full' : '';
   function statRow(label, base, after){
     if(after === base) return `<div class="row"><span>${label}</span><b>${after}</b></div>`;
     const diff = after - base;
     const sign = diff >= 0 ? '+' : '';
     return `<div class="row"><span>${label}</span><b>${after}<span class="vet">(${base} ${sign}${diff})</span></b></div>`;
   }
-  const atkAfter = Math.round(d.at * expMul);
-  const penAfter = Math.round(d.p * expMul);
+  const atkAfter = Math.round(d.at * atkStarMul * expMul);
+  const penAfter = Math.round(d.p * atkStarMul * expMul);
   const spdAfter = Math.round(d.s * vetMul);
   const armAfter = Math.round(d.a * vetMul);
   const acAfter = Math.round(d.ac * vetMul);
@@ -530,29 +531,59 @@ function showTankDetail(isMap, idx){
   document.body.appendChild(div);
 }
 
+// ===== 对比（A/B 存 { name, exp }）=====
 function renderCompare(){
   const cur = getCur();
-  const cnt = (S.compareA!=null?1:0) + (S.compareB!=null?1:0);
+  const ta = S.compareA, tb = S.compareB;
+  const taName = ta ? ta.name : null, tbName = tb ? tb.name : null;
+  const taExp = ta ? (ta.exp || 0) : 0, tbExp = tb ? (tb.exp || 0) : 0;
+  const taData = taName ? (TANKS[taName] || ELITE_TANKS[taName]) : null;
+  const tbData = tbName ? (TANKS[tbName] || ELITE_TANKS[tbName]) : null;
+  const cnt = (ta ? 1 : 0) + (tb ? 1 : 0);
+
+  const colorOf = (d, fb) => d && NAT_COLOR[d.na] ? NAT_COLOR[d.na].c : fb;
+  const starsStr = st => st > 0 ? ' ' + '★'.repeat(st) : '';
+  const isSel = (name, exp) => (taName === name && taExp == exp) || (tbName === name && tbExp == exp);
+
   let html = `<div class="panel"><h3>对比 (${cnt}/2)</h3>
-    ${cur.tank.length < 2 ? '<div class="cmp-tip">至少 2 辆</div>' :
-      `<div class="tank-list">${cur.tank.map((t,i)=>{ const d = TANKS[t.n]; if(!d) return '';
-        const sel = S.compareA === i || S.compareB === i;
+    <div class="cmp-picker">
+      <div class="cmp-slot ${ta ? 'filled' : ''}" onclick="openComparePicker('A')">
+        ${ta ? `<b style="color:${colorOf(taData,'#7bff7b')}">${esc(taName)}${starsStr(getStar(taExp))}</b>${taExp ? `<br><span style="font-size:10px;color:#8ab88a">${taExp} exp</span>` : ''}` : '<span style="color:#5a6a5a">+ 选择坦克 A</span>'}
+      </div>
+      <div class="cmp-vs">VS</div>
+      <div class="cmp-slot ${tb ? 'filled' : ''}" onclick="openComparePicker('B')">
+        ${tb ? `<b style="color:${colorOf(tbData,'#7bff7b')}">${esc(tbName)}${starsStr(getStar(tbExp))}</b>${tbExp ? `<br><span style="font-size:10px;color:#8ab88a">${tbExp} exp</span>` : ''}` : '<span style="color:#5a6a5a">+ 选择坦克 B</span>'}
+      </div>
+    </div>`;
+
+  // 快捷选择：按 (name, exp) 去重 —— 同名不同车组分开显示
+  const seen = new Set();
+  const ownedList = [];
+  (cur.tank || []).forEach(t => {
+    const key = t.n + ':' + (t.exp || 0);
+    if(seen.has(key)) return;
+    seen.add(key);
+    ownedList.push(t);
+  });
+  if(ownedList.length > 0){
+    html += `<div style="font-size:11px;color:#8ab88a;margin-top:10px;margin-bottom:4px">快捷选择（已拥有 · 保留各自车组）：</div>
+      <div class="tank-list">${ownedList.map(t => {
+        const d = TANKS[t.n] || ELITE_TANKS[t.n]; if(!d) return '';
         const st = getStar(t.exp || 0);
-        const stars = st > 0 ? ' ' + '★'.repeat(st) : '';
-        return `<div class="tank-chip ${sel?'sel':''}" onclick="toggleCompare(${i})">${TY_ICON[d.ty]}<span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span></div>`;
-      }).join('')}</div>`}</div>`;
-  if(cur.tank.length >= 2 && S.compareA != null && S.compareB != null && cur.tank[S.compareA] && cur.tank[S.compareB]){
-    const ta = cur.tank[S.compareA], tb = cur.tank[S.compareB];
-    const da = TANKS[ta.n], db = TANKS[tb.n];
-    const taStar = getStar(ta.exp || 0);
-    const tbStar = getStar(tb.exp || 0);
-    const taName = ta.n + (taStar > 0 ? ' ' + '★'.repeat(taStar) : '');
-    const tbName = tb.n + (tbStar > 0 ? ' ' + '★'.repeat(tbStar) : '');
+        const sel = isSel(t.n, t.exp || 0);
+        return `<div class="tank-chip ${sel?'sel':''}" onclick="toggleCompare('${esc(t.n)}',${t.exp || 0})">${TY_ICON[d.ty]}<span class="tank-name" data-star="${st}">${esc(t.n)}${starsStr(st)}</span></div>`;
+      }).join('')}</div>`;
+  }
+  html += `</div>`;
+
+  if(taData && tbData){
+    const taStar = getStar(taExp);
+    const tbStar = getStar(tbExp);
     const floatA = veteranFloat(taStar), floatB = veteranFloat(tbStar);
     const expMulA = taStar === 0 ? 1 : (floatA.min + floatA.max) / 2;
     const expMulB = tbStar === 0 ? 1 : (floatB.min + floatB.max) / 2;
-    const vetMulA = veteranMul(taStar);
-    const vetMulB = veteranMul(tbStar);
+    const vetMulA = veteranMul(taStar), vetMulB = veteranMul(tbStar);
+    const atkMulA = veteranAtkMul(taStar), atkMulB = veteranAtkMul(tbStar);
     function dsp(base, after, suf){
       if(after === base) return `${after}${suf || ''}`;
       const diff = after - base;
@@ -563,14 +594,17 @@ function renderCompare(){
       return { label, dispA: dsp(baseA, afterA, sufA), dispB: dsp(baseB, afterB, sufB), valA: afterA, valB: afterB };
     }
     const rows = [
-      { label: '火力', dispA: da.fd, dispB: db.fd, valA: da.fp, valB: db.fp },
-      mkRow('攻击', da.at, db.at, Math.round(da.at * expMulA), Math.round(db.at * expMulB)),
-      mkRow('速度', da.s, db.s, Math.round(da.s * vetMulA), Math.round(db.s * vetMulB)),
-      mkRow('穿深', da.p, db.p, Math.round(da.p * expMulA), Math.round(db.p * expMulB), da.heat?'*':'', db.heat?'*':''),
-      mkRow('装甲', da.a, db.a, Math.round(da.a * vetMulA), Math.round(db.a * vetMulB)),
-      mkRow('活度', da.ac, db.ac, Math.round(da.ac * vetMulA), Math.round(db.ac * vetMulB)),
+      { label: '火力', dispA: taData.fd, dispB: tbData.fd, valA: taData.fp, valB: tbData.fp },
+      mkRow('攻击', taData.at, tbData.at, Math.round(taData.at * atkMulA * expMulA), Math.round(tbData.at * atkMulB * expMulB)),
+      mkRow('速度', taData.s, tbData.s, Math.round(taData.s * vetMulA), Math.round(tbData.s * vetMulB)),
+      mkRow('穿深', taData.p, tbData.p, Math.round(taData.p * atkMulA * expMulA), Math.round(tbData.p * atkMulB * expMulB), taData.heat?'*':'', tbData.heat?'*':''),
+      mkRow('装甲', taData.a, tbData.a, Math.round(taData.a * vetMulA), Math.round(tbData.a * vetMulB)),
+      mkRow('活度', taData.ac, tbData.ac, Math.round(taData.ac * vetMulA), Math.round(tbData.ac * vetMulB)),
     ];
-    html += `<div class="panel"><div class="cmp-header"><div class="side">${esc(taName)}</div><div class="vs">VS</div><div class="side">${esc(tbName)}</div></div>
+    html += `<div class="panel"><div class="cmp-header">
+      <div class="side">${esc(taName)}${starsStr(taStar)}</div>
+      <div class="vs">VS</div>
+      <div class="side">${esc(tbName)}${starsStr(tbStar)}</div></div>
       ${rows.map(r => { const aW = r.valA > r.valB, bW = r.valB > r.valA; const diff = Math.abs(r.valA - r.valB);
         return `<div class="cmp-row"><div class="side ${aW?'win':''}">${r.dispA}${aW?` ↑${diff}`:''}</div><div class="item">${r.label}</div><div class="side ${bW?'win':''}">${r.dispB}${bW?` ↑${diff}`:''}</div></div>`;
       }).join('')}</div>`;
@@ -578,32 +612,157 @@ function renderCompare(){
   html += `<div class="btns" style="margin-top:auto"><button class="btn" onclick="setTab('base')">← 返回基地</button></div>`;
   return html;
 }
-function toggleCompare(i){ if(S.compareA === i){ S.compareA = null; render(); return; } if(S.compareB === i){ S.compareB = null; render(); return; } if(S.compareA == null){ S.compareA = i; } else if(S.compareB == null){ S.compareB = i; } else { S.compareA = S.compareB; S.compareB = i; } render(); }
+function toggleCompare(name, exp){
+  exp = exp || 0;
+  if(S.compareA && S.compareA.name === name && S.compareA.exp == exp){ S.compareA = null; render(); return; }
+  if(S.compareB && S.compareB.name === name && S.compareB.exp == exp){ S.compareB = null; render(); return; }
+  if(S.compareA == null){ S.compareA = { name, exp }; }
+  else if(S.compareB == null){ S.compareB = { name, exp }; }
+  else { S.compareA = S.compareB; S.compareB = { name, exp }; }
+  render();
+}
+function openComparePicker(slot){
+  S.comparePickSlot = slot;
+  document.querySelectorAll('.cmp-pick-modal').forEach(el => el.remove());
+  const cur = getCur();
+  let list = getAllTankList();
+  if((S.comparePickNat || 'all') !== 'all') list = list.filter(t => t.nat === S.comparePickNat);
+  if((S.comparePickTy || 'all') !== 'all') list = list.filter(t => t.ref.ty === S.comparePickTy);
+  const ord = {德:0, 美:1, 苏:2, 法:3, 波:4, 英:5, 意:6, 日:7, 芬:8};
+  list.sort((a, b) => {
+    if(a.nat !== b.nat) return (ord[a.nat] || 0) - (ord[b.nat] || 0);
+    return a.lv - b.lv;
+  });
+
+  // 展开成 (name, exp) 行：玩家已拥有 → 每个唯一 exp 一行；未拥有/敌方专属 → exp=0 一行
+  const rows = [];
+  for(const t of list){
+    const ownedInsts = (cur.tank || []).filter(x => x.n === t.n);
+    if(ownedInsts.length === 0){
+      rows.push({ name: t.n, exp: 0, nat: t.nat, lv: t.lv, ref: t.ref, elite: t.elite, enemy: t.enemy, owned: false });
+    } else {
+      const expSet = [...new Set(ownedInsts.map(x => x.exp || 0))].sort((a, b) => b - a);
+      expSet.forEach(e => {
+        rows.push({ name: t.n, exp: e, nat: t.nat, lv: t.lv, ref: t.ref, elite: t.elite, enemy: t.enemy, owned: true });
+      });
+    }
+  }
+
+  const div = document.createElement('div');
+  div.className = 'cmp-pick-modal';
+  div.onclick = e => { if(e.target === div) div.remove(); };
+  const curSel = slot === 'A' ? S.compareA : S.compareB;
+  const listHTML = rows.length ? rows.map(r => {
+    const nc = NAT_COLOR[r.nat] || { c: '#8ab88a' };
+    const cls = ['cmp-pick-item'];
+    const st = getStar(r.exp);
+    if(curSel && curSel.name === r.name && (curSel.exp || 0) === r.exp) cls.push('picked');
+    const isE = r.elite ? ' ⭐' : '';
+    const isEnemy = r.enemy ? ' 🎯' : '';
+    const starStr = st > 0 ? ' ' + '★'.repeat(st) : '';
+    const expStr = r.owned ? `<span style="font-size:9px;color:#8ab88a;margin-left:5px">${r.exp}exp</span>` : '';
+    return `<div class="${cls.join(' ')}" onclick="pickCompareTank('${slot}','${esc(r.name)}',${r.exp})">
+      <span style="color:${nc.c};font-size:11px;font-weight:800;flex:0 0 44px">${NAT_NAME[r.nat] || r.nat}</span>
+      <span style="flex:1;margin-left:6px">${TY_ICON[r.ref.ty]} ${esc(r.name)}${starStr}${expStr}${isE}${isEnemy}</span>
+      <span style="font-size:10px;color:#8ab88a">Lv${r.lv}</span>
+    </div>`;
+  }).join('') : '<div style="text-align:center;padding:20px;color:#5a6a5a;font-size:12px">没有匹配的坦克</div>';
+
+  const natList = [['all','全部国家'],['德','德国'],['美','美国'],['苏','苏联'],['法','法国'],['波','波兰'],['英','英国'],['意','意大利'],['日','日本'],['芬','芬兰']];
+  const tyList = [['all','全部类型'],['light','轻坦'],['medium','中坦'],['heavy','重坦'],['td','坦歼']];
+  const curNat = S.comparePickNat || 'all';
+  const curTy = S.comparePickTy || 'all';
+  const natBtns = natList.map(([k,v]) => `<button class="filter-btn ${curNat===k?'act':''}" onclick="setComparePickNat('${k}')">${v}</button>`).join('');
+  const tyBtns = tyList.map(([k,v]) => `<button class="filter-btn ${curTy===k?'act':''}" onclick="setComparePickTy('${k}')">${v}</button>`).join('');
+
+  div.innerHTML = `<div class="cmp-pick-wrap">
+    <h3>选择坦克 ${slot}</h3>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">${natBtns}</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">${tyBtns}</div>
+    <div class="cmp-pick-list">${listHTML}</div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn ghost" style="flex:1" onclick="pickCompareTank('${slot}', null)">清除</button>
+      <button class="btn" style="flex:1" onclick="this.closest('.cmp-pick-modal').remove()">关闭</button>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+}
+function setComparePickNat(k){ S.comparePickNat = k; openComparePicker(S.comparePickSlot || 'A'); }
+function setComparePickTy(k){ S.comparePickTy = k; openComparePicker(S.comparePickSlot || 'A'); }
+function pickCompareTank(slot, name, exp){
+  if(name == null){
+    if(slot === 'A') S.compareA = null;
+    else if(slot === 'B') S.compareB = null;
+  } else {
+    const entry = { name, exp: exp || 0 };
+    if(slot === 'A') S.compareA = entry;
+    else if(slot === 'B') S.compareB = entry;
+  }
+  document.querySelectorAll('.cmp-pick-modal').forEach(el => el.remove());
+  render();
+}
+function compareFromCodex(name){
+  document.querySelectorAll('.tk-detail-modal').forEach(el => el.remove());
+  // 图鉴对比：裸属性（exp=0）
+  S.compareA = { name, exp: 0 };
+  S.compareB = null;
+  S.baseTab = 'compare';
+  S.screen = 'base';
+  M.screen = 'none';
+  render();
+  setTimeout(() => openComparePicker('B'), 80);
+}
 
 function getAllTankList(){
   const list = [];
+  const seen = new Set();
   for(const nat of ['德','美','苏']){
     const tree = TREES[nat];
     for(const name in tree){
       const d = TANKS[name];
-      if(!d) continue;
+      if(!d || seen.has(name)) continue;
+      seen.add(name);
       list.push({ n: name, nat, lv: tree[name].lv, elite: false, enemy: false, ref: d });
     }
   }
   for(const name in ELITE_TANKS){
     const d = ELITE_TANKS[name];
+    if(seen.has(name)) continue;
+    seen.add(name);
     list.push({ n: name, nat: d.na, lv: 15, elite: true, enemy: false, ref: d });
   }
-  for(const nat of ['法','波','英']){
+  for(const nat of ['法','波','英','意','日','芬','德']){
     const tree = ENEMY_TREES[nat] || {};
     for(const name in tree){
       const d = TANKS[name];
-      if(!d) continue;
+      if(!d || seen.has(name)) continue;
+      seen.add(name);
       list.push({ n: name, nat, lv: tree[name].lv, elite: false, enemy: true, ref: d });
     }
   }
   return list;
 }
+
+function isEnemyOnlyTank(name){
+  if(ELITE_TANKS[name]) return false;
+  for(const nat of ['德','美','苏']){
+    if(TREES[nat] && TREES[nat][name]) return false;
+  }
+  for(const nat in ENEMY_TREES){
+    if(ENEMY_TREES[nat] && ENEMY_TREES[nat][name]) return true;
+  }
+  return false;
+}
+function getTankCodexLv(name){
+  for(const nat of ['德','美','苏']){
+    if(TREES[nat] && TREES[nat][name]) return TREES[nat][name].lv;
+  }
+  for(const nat in ENEMY_TREES){
+    if(ENEMY_TREES[nat] && ENEMY_TREES[nat][name]) return ENEMY_TREES[nat][name].lv;
+  }
+  return 15;
+}
+
 function renderCodex(){
   const cur = getCur();
   const owned = new Set((cur.tank || []).map(t => t.n));
@@ -621,7 +780,7 @@ function renderCodex(){
 
   let html = `<div class="panel"><h3>📖 坦克图鉴 · ${ownedCount}/${ownableCount}</h3>
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
-      ${[['all','全部国家'],['德','德国'],['美','美国'],['苏','苏联'],['法','法国'],['波','波兰'],['英','英国']].map(([k,v]) => `<button class="filter-btn ${S.codexNat===k?'act':''}" onclick="S.codexNat='${k}';render()">${v}</button>`).join('')}
+      ${[['all','全部国家'],['德','德国'],['美','美国'],['苏','苏联'],['法','法国'],['波','波兰'],['英','英国'],['意','意大利'],['日','日本'],['芬','芬兰']].map(([k,v]) => `<button class="filter-btn ${S.codexNat===k?'act':''}" onclick="S.codexNat='${k}';render()">${v}</button>`).join('')}
     </div>
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
       ${[['all','全部类型'],['light','轻坦'],['medium','中坦'],['heavy','重坦'],['td','坦歼']].map(([k,v]) => `<button class="filter-btn ${S.codexTy===k?'act':''}" onclick="S.codexTy='${k}';render()">${v}</button>`).join('')}
@@ -649,16 +808,8 @@ function showCodexDetail(name){
   const cur = getCur();
   const owned = (cur.tank || []).some(t => t.n === name);
   const isElite = !!ELITE_TANKS[name];
-  const isEnemy = ['法','波','英'].includes(d.na);
-  let lv = 15;
-  for(const nat of ['德','美','苏']){
-    if(TREES[nat][name]){ lv = TREES[nat][name].lv; break; }
-  }
-  if(isEnemy){
-    for(const nat of ['法','波','英']){
-      if(ENEMY_TREES[nat] && ENEMY_TREES[nat][name]){ lv = ENEMY_TREES[nat][name].lv; break; }
-    }
-  }
+  const isEnemy = isEnemyOnlyTank(name);
+  const lv = isElite ? 15 : getTankCodexLv(name);
   const rng = d.fp <= 50 ? '1km' : d.fp <= 100 ? '2km' : '3km';
   const ownText = isEnemy
     ? '<span style="color:#ff9c9c">🎯 敌方专属</span>'
@@ -684,6 +835,7 @@ function showCodexDetail(name){
       射程：${rng}${d.heat?'<br>* 破甲弹：穿深不随距离衰减':''}
     </div>
     <div class="btns" style="margin-top:12px">
+      <button class="btn pri" onclick="compareFromCodex('${esc(name)}')">⚖️ 对比（裸属性）</button>
       <button class="btn" onclick="this.closest('.tk-detail-modal').remove()">关闭</button>
     </div>
   </div>`;
@@ -760,7 +912,12 @@ function histEnemyCount(level, config){
   const chapter = getHistChapterByLevel(level);
   if(!chapter) return 1;
   const idx = chapter.levels.indexOf(level);
-  const table = { poland:[1,2,2,2,3], france:[2,2,3,3,4], northAfrica:[3,3,4,4,5], barbarossa:[4,5,5,5,6], kursk:[5,6,6,6,6], empireDusk:[6,6,6,6,6] }[chapter.id];
+  const table = {
+    poland:[1,2,2,2,3], france:[2,2,3,3,4], northAfrica:[3,3,4,4,5],
+    barbarossa:[4,5,5,5,6], kursk:[5,6,6,6,6], empireDusk:[6,6,6,6,6],
+    winterWar:[1,2,2,2,3], barbarossaDef:[2,2,3,3,4], stalingrad:[3,3,4,4,5],
+    kurskDef:[4,5,5,5,6], bagration:[5,6,6,6,6], farEast:[6,6,6,6,6],
+  }[chapter.id];
   let base = (table && table[idx] != null) ? table[idx] : 1;
   const mul = (config.modifiers && config.modifiers.enemyCountMul) || 1;
   if(mul !== 1) base = Math.max(1, Math.round(base * mul));
@@ -780,7 +937,10 @@ function generateHistoricalEnemyTeam(level, diff, config){
   const pool = [];
   for(const nat of nations){
     const tree = ENEMY_TREES[nat] || {};
-    for(const name in tree) pool.push({ name, lv: tree[name].lv });
+    for(const name in tree){
+      if(tree[name].reserve) continue;
+      pool.push({ name, lv: tree[name].lv });
+    }
   }
   if(pool.length === 0) return generateEnemyTeam(level, diff);
 
@@ -857,7 +1017,7 @@ function renderHistChapters(){
   const chapters = CAMPAIGN_CHAPTERS[S.nation] || [];
   const cm = cur.hist.clearMax || 0;
   let html = `<h1>📜 历史战役 · ${NAT_NAME[S.nation]}</h1>
-  <div class="sub">进度：已通关 ${cm} / 10 关</div>
+  <div class="sub">进度：已通关 ${cm} / 30 关</div>
   <div class="panel" style="padding:0">`;
   if(chapters.length === 0){
     html += `<div style="text-align:center;padding:24px;color:#8ab88a">该国家历史战役尚未开放</div>`;
@@ -903,8 +1063,13 @@ function renderHistChapterPanel(){
   const chapter = (CAMPAIGN_CHAPTERS[S.nation] || []).find(ch => ch.id === S.histChapterId);
   if(!chapter) return '';
   const cm = cur.hist.clearMax || 0;
-  const cfg0 = (LEVEL_CONFIG[S.nation] || {})[chapter.levels[0]] || {};
-  const enemies = [cfg0.enemyNation, cfg0.enemyNation2, cfg0.enemyNation3].filter(Boolean).map(n => NAT_NAME[n]).join(' + ');
+  const enemySet = new Set();
+  chapter.levels.forEach(lv => {
+    const c = (LEVEL_CONFIG[S.nation] || {})[lv];
+    if(!c) return;
+    [c.enemyNation, c.enemyNation2, c.enemyNation3].filter(Boolean).forEach(n => enemySet.add(n));
+  });
+  const enemies = [...enemySet].map(n => NAT_NAME[n]).join(' + ');
   let html = `<div class="panel" style="margin-top:0">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px">
       <div style="flex:1;min-width:0">

@@ -25,7 +25,7 @@ function getCur(){
 let MAP_SAVES = (function(){ try{ const s = localStorage.getItem(MAP_SAVE_KEY); if(s) return JSON.parse(s); }catch(e){} return [null,null,null]; })();
 function persistMapSaves(){ try{ localStorage.setItem(MAP_SAVE_KEY, JSON.stringify(MAP_SAVES)); }catch(e){} }
 
-const S = { screen: 'main', saveIndex: -1, nation: '德', baseTab: 'base', compareA: null, compareB: null, codexNat: 'all', codexTy: 'all', histMode: false, histChapterId: null };
+const S = { screen: 'main', saveIndex: -1, nation: '德', baseTab: 'base', compareA: null, compareB: null, codexNat: 'all', codexTy: 'all', comparePickNat: 'all', comparePickTy: 'all', histMode: false, histChapterId: null };
 const F = { team: { p: [], e: [] }, side: 'p', mode: 'hotseat', expanded: {} };
 const B = { units: [], log: [], stats: {}, round: 0, stageIdx: 0, ccRound: 0, cur: null, await: null, resolve: null, over: false, result: null, difficulty: 'normal', mode: 'campaign', freeMode: 'hotseat', earned: 0, uid: 0, lastStage: -1, mapCtx: null, aiCallback: null, auto: false, buffs: null, tactical: null, perfect: false, isFirstClear: false, _veteranResult: null, retreatUsedThisTurn: false, retreatSelect: false, retreatPicked: [], modifiers: null, histLevel: 0 };
 const M = { screen: 'main', saveIndex: -1, gameIdx: 0, nation: '德', pendingNation: null, selectedUnit: null, moveMode: null, undoStack: [], lastClick: { id: -1, time: 0 }, selectedBaseTab: 'base', editingUnitId: null };

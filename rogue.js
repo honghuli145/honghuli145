@@ -533,7 +533,7 @@ function renderRogueTeamChip(t){
   const hpPct = Math.round(t.hp / t.maxHp * 100);
   const hpCls = hpPct < 30 ? 'low' : hpPct < 70 ? 'mid' : '';
   const expPct = expProgressPct(t.exp || 0);
-  const expFull = st >= 3 ? ' full' : '';
+  const expFull = st >= 5 ? ' full' : '';
   return `<div class="rogue-team-chip">
     <div class="rtc-header">
       <span class="tank-name" data-star="${st}">${esc(t.n)}${stars}</span>
@@ -782,6 +782,14 @@ function pickRandomRogueTank(lv){
   for(const nat of ['德','美','苏']){
     const tree = TREES[nat];
     for(const name in tree){
+      if(Math.abs(tree[name].lv - lv) <= 1.5) pool.push(name);
+    }
+  }
+  for(const nat of ['法','波','英','意','日']){
+    const tree = ENEMY_TREES[nat];
+    if(!tree) continue;
+    for(const name in tree){
+      if(tree[name].reserve) continue;
       if(Math.abs(tree[name].lv - lv) <= 1.5) pool.push(name);
     }
   }
@@ -1058,6 +1066,7 @@ function rogueEnemyCount(layer, type){
 function generateRogueEnemyTeam(layer, type){
   const count = rogueEnemyCount(layer, type);
   const otherNats = ['德','美','苏'].filter(n => n !== RG.nation);
+  const allNats = ['德','美','苏','法','波','英','意','日'].filter(n => n !== RG.nation);
   const team = [];
   const used = new Set();
   if(RG.phase === 2 && (type === 'elite' || type === 'boss')){
@@ -1072,10 +1081,12 @@ function generateRogueEnemyTeam(layer, type){
   let tries = 0;
   while(team.length < count && tries < 100){
     tries++;
-    const nat = otherNats[Math.floor(Math.random() * otherNats.length)];
-    const tree = TREES[nat];
+    const nat = allNats[Math.floor(Math.random() * allNats.length)];
+    const tree = TREES[nat] || ENEMY_TREES[nat];
+    if(!tree) continue;
     const pool = [];
     for(const name in tree){
+      if(tree[name] && tree[name].reserve) continue;
       if(Math.abs(tree[name].lv - lv) <= 1.5) pool.push(name);
     }
     if(pool.length === 0) continue;
@@ -1084,8 +1095,9 @@ function generateRogueEnemyTeam(layer, type){
     used.add(name); team.push(name);
   }
   while(team.length < count){
-    const nat = otherNats[Math.floor(Math.random() * otherNats.length)];
-    const pool = Object.keys(TREES[nat]);
+    const nat = allNats[Math.floor(Math.random() * allNats.length)];
+    const tree = TREES[nat] || ENEMY_TREES[nat];
+    const pool = tree ? Object.keys(tree).filter(k => !(tree[k] && tree[k].reserve)) : ['TKS'];
     team.push(pool[Math.floor(Math.random() * pool.length)]);
   }
   return team;

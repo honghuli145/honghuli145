@@ -7,7 +7,7 @@ function initBattleBuffs(){
     playerAtkBonus: 0, playerPenBonus: 0, playerIronCurtain: 0, playerArmorBonus: 0,
     smokeDebuff: 0, playerDesperate: 0, enemySuppress: 0, playerNextFullDmg: false,
     enemyAtkBonus: 0, enemyPenBonus: 0, enemyIronCurtain: 0, enemyArmorBonus: 0,
-    playerSuppress: 0, enemyNextFullDmg: false,
+    playerSuppress: 0, enemyNextFullDmg: false, enemyDesperate: 0,
   };
 }
 function resetBuffsTurn(){ initBattleBuffs(); }
@@ -25,6 +25,7 @@ function makeBattleUnit(name, side, idx, hpOverride, exp, tankUid){
   const star = getStar(exp || 0);
   const float = veteranFloat(star);
   const vetMul = veteranMul(star);
+  const atkMul = veteranAtkMul(star);
   const baseMaxHp = t.ac;
   const maxHp = Math.round(baseMaxHp * vetMul);
   let hp;
@@ -34,7 +35,7 @@ function makeBattleUnit(name, side, idx, hpOverride, exp, tankUid){
   } else {
     hp = maxHp;
   }
-  const u = { uid: 'bu' + (B.uid++), name, icon: TY_ICON[t.ty], ty: t.ty, fp: t.fp, fd: t.fd, at: t.at, s: Math.round(t.s * vetMul), p: t.p, a: Math.round(t.a * vetMul), heat: !!t.heat, maxHp, hp, side, idx, alive: true, actedThisTurn: false, usedTacticalThisTurn: false, skipTurn: false, vetMin: float.min, vetMax: float.max, star, exp: exp || 0, baseMaxHp, tankUid: tankUid || null };
+  const u = { uid: 'bu' + (B.uid++), name, icon: TY_ICON[t.ty], ty: t.ty, fp: t.fp, fd: t.fd, at: Math.round(t.at * atkMul), s: Math.round(t.s * vetMul), p: Math.round(t.p * atkMul), a: Math.round(t.a * vetMul), heat: !!t.heat, maxHp, hp, side, idx, alive: true, actedThisTurn: false, usedTacticalThisTurn: false, skipTurn: false, vetMin: float.min, vetMax: float.max, star, exp: exp || 0, baseMaxHp, tankUid: tankUid || null };
   B.stats[u.uid] = { name: u.name, icon: u.icon, side, dmg: 0, kills: 0, alive: true, taken: 0 };
   return u;
 }
@@ -416,8 +417,10 @@ async function tryAIUseTactical(u){
 }
 function getAITacticalSlotsForBattle(){
   if(B.mode === 'campaign' || B.mode === 'historical'){
-    const ch = getCur() ? getCur().chapter : 1;
-    return ch >= 21 ? 2 : ch >= 11 ? 1 : 0;
+    const cur = getCur();
+    if(!cur) return 0;
+    const prog = B.mode === 'historical' ? (cur.hist.clearMax || 0) : cur.chapter;
+    return prog >= 21 ? 2 : prog >= 11 ? 1 : 0;
   }
   if(B.mode === 'map'){
     const sv = getMapCur(); if(!sv) return 0;

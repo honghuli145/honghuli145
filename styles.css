@@ -787,3 +787,47 @@ h1{font-size:20px;font-weight:800;text-align:center;color:#7bff7b;letter-spacing
   border-color:#4dffd0;
   color:#002a1a;
 }
+
+/* ===== ★4 ★5 ===== */
+.tank-name[data-star="4"]{
+  color:#ff4d4d;
+  text-shadow:0 0 6px rgba(255,77,77,.7), 0 0 12px rgba(255,120,60,.5);
+}
+.tank-name[data-star="5"]{
+  background:linear-gradient(90deg,
+    #ff4d4d 0%,
+    #ffd76e 20%,
+    #4dff7b 40%,
+    #4dd0ff 60%,
+    #c86bff 80%,
+    #ff4d4d 100%
+  );
+  background-size:200% 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:transparent;
+  font-weight:900;
+  animation:rainbowFlow 2.5s linear infinite;
+  filter:drop-shadow(0 0 3px rgba(255,215,110,.6)) drop-shadow(0 0 6px rgba(200,107,255,.4));
+}
+@keyframes rainbowFlow{
+  0%   { background-position:0% 0; }
+  100% { background-position:-200% 0; }
+}
+
+/* ===== 对比选择器 ===== */
+.cmp-picker{display:flex;align-items:stretch;gap:8px;margin-top:4px}
+.cmp-slot{flex:1;padding:12px 8px;border-radius:10px;border:1.5px dashed #2a4a2a;background:rgba(0,0,0,.35);text-align:center;cursor:pointer;font-size:13px;font-weight:800;transition:.15s;display:flex;align-items:center;justify-content:center;min-height:54px;word-break:break-all}
+.cmp-slot:active{transform:scale(.98)}
+.cmp-slot.filled{border-style:solid;border-color:#4dff7b;background:rgba(77,255,123,.1)}
+.cmp-vs{flex:0 0 28px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#8ab88a;font-weight:800}
+
+.cmp-pick-modal{position:fixed;inset:0;background:rgba(6,9,18,.88);display:flex;align-items:center;justify-content:center;z-index:400;padding:16px}
+.cmp-pick-wrap{width:100%;max-width:440px;background:#0f1f0f;border:2px solid #4dff7b;border-radius:14px;padding:16px;max-height:80vh;display:flex;flex-direction:column}
+.cmp-pick-wrap h3{font-size:15px;color:#7bff7b;margin-bottom:10px}
+.cmp-pick-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;-webkit-overflow-scrolling:touch}
+.cmp-pick-item{display:flex;align-items:center;padding:8px 10px;border-radius:8px;border:1.5px solid #2a4a2a;background:rgba(0,0,0,.4);cursor:pointer;font-size:12.5px;font-weight:700;transition:.15s;flex-shrink:0}
+.cmp-pick-item:active{transform:scale(.99)}
+.cmp-pick-item:hover{border-color:#4dff7b}
+.cmp-pick-item.picked{border-color:#ffd76e;background:rgba(255,215,110,.12)}

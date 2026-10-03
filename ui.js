@@ -76,6 +76,22 @@ function backMain(){ S.histMode = false; S.histChapterId = null; S.screen = 'mai
 
 // ---------- 更新日志 ----------
 const CHANGELOG = [
+  { v: '0.5.2', date: '2025-10-03', items: [
+    '🇷🇺 苏联历史战役全 6 章 30 关开放（冬季战争 → 巴巴罗萨防御 → 斯大林格勒 → 库尔斯克防御 → 巴格拉季昂 → 远东终战）',
+    '⚖️ 对比系统重做：A / B 槽位保留车组加成，同名坦克按星级分开对比',
+    '⚖️ 对比选择器支持国家 / 类型筛选，敌方专属坦克也可参与对比',
+    '⚖️ 图鉴详情新增「⚖️ 对比」入口',
+    '📖 图鉴详情等级修正：日 / 意 / 芬坦克不再统一显示为 Lv15',
+    '📖 图鉴「敌方专属」判定通用化，覆盖全部对手国',
+    '📖 FT-17 补入法国阵营（芬兰保留）',
+    '📜 历史战役「切换国家」不再跳回战役模式',
+    '📜 历史章节标题敌军聚合全部关卡（如北非：英 + 法 + 美）',
+    '🇯🇵 日系后期等级修正：四式炮战 15→13，五式炮战 13→13.5',
+    '🎯 修复部分战术指令在敌方使用时无效的问题',
+    '🎯 历史战役 AI 指令槽改按历史进度计算',
+    '🎖 坦克详情经验阈值修正：3★ / 4★ 不再显示「满级」',
+    '📜 版本号升至 0.5.2',
+  ]},
   { v: '0.5.1', date: '2025-10-02', items: [
     '📜 新增历史战役模式（主菜单独立入口，与战役模式共享存档）',
     '📜 历史战役第一章 · 波兰战役（1939.9，5 关）',
@@ -440,16 +456,25 @@ function doImportSave(){
 }
 function renderNationSelect(){
   const sv = SAVES[S.saveIndex];
-  let html = `<h1>选择国家</h1><div class="sub">三国独立科技树</div><div class="nations">`;
+  const isHist = S.histMode === true;
+  let html = `<h1>选择国家</h1>
+    <div class="sub">${isHist ? '📜 历史战役 · 独立进度' : '三国独立科技树'}</div>
+    <div class="nations">`;
   ['德','美','苏'].forEach(n => {
     const nc = NAT_COLOR[n]; const ns = sv.c[n];
+    const progress = isHist
+      ? `历史进度 ${ns.hist ? (ns.hist.clearMax || 0) : 0} / 30 关`
+      : `第 ${ns.chapter} 关`;
     html += `<div class="nation" style="border-color:${nc.c};--c1:${nc.c1};--c2:${nc.c2}" onclick="pickNation('${n}')">
       <h3 style="color:${nc.c}">${NAT_NAME[n]}</h3>
-      <p>第 ${ns.chapter} 关 · 拥有 ${ns.tank.length} 辆 · 研发点 ${ns.rp}</p>
+      <p>${progress} · 拥有 ${ns.tank.length} 辆 · 研发点 ${ns.rp}</p>
     </div>`;
   });
-  const backFn = S.histMode ? `S.histMode=false;goSaveSelect()` : `goSaveSelect()`;
-  html += `</div><div class="btns" style="margin-top:auto"><button class="btn" onclick="${backFn}">← 返回存档</button><button class="btn" onclick="backMain()">← 主菜单</button></div>`;
+  const backFn = isHist ? 'goHistSaveSelect()' : 'goSaveSelect()';
+  html += `</div><div class="btns" style="margin-top:auto">
+    <button class="btn" onclick="${backFn}">← 返回存档</button>
+    <button class="btn" onclick="backMain()">← 主菜单</button>
+  </div>`;
   return html;
 }
 function pickNation(n){
@@ -482,6 +507,7 @@ function goFreeHotseat(){
   F.team = { p: [], e: [] };
   F.side = 'p';
   F.expanded = {};
+  F.tab = '德';
   F.pTacs = ['volley','smoke'];
   F.eTacs = ['apround','repair'];
   S.screen = 'freeSelect'; M.screen = 'none'; render();
@@ -491,6 +517,7 @@ function goFreeAI(){
   F.team = { p: [], e: [] };
   F.side = 'p';
   F.expanded = {};
+  F.tab = '德';
   F.pTacs = ['volley','smoke'];
   F.eTacs = ['apround','repair'];
   S.screen = 'freeSelect'; M.screen = 'none'; render();
@@ -499,25 +526,41 @@ function renderFreeSelect(){
   const P = F.team.p, E = F.team.e;
   const curTeam = F.side === 'p' ? P : E;
   const isAI = F.mode === 'ai';
+  if(!F.tab) F.tab = '德';
+  const allNations = ['德','美','苏','法','波','英','意','日'];
+
   const groups = {};
-  for(const n of ['德','美','苏']) groups[n] = { light: [], medium: [], heavy: [], td: [] };
-  for(const name in TANKS){ const t = TANKS[name]; if(groups[t.na] && groups[t.na][t.ty]) groups[t.na][t.ty].push(name); }
+  for(const n of allNations) groups[n] = { light: [], medium: [], heavy: [], td: [] };
+  for(const name in TANKS){
+    const t = TANKS[name];
+    if(groups[t.na] && groups[t.na][t.ty]) groups[t.na][t.ty].push(name);
+  }
+
   function gH(nat, ty){
     const key = nat + '-' + ty; const list = groups[nat][ty];
+    if(list.length === 0) return '';
     const open = F.expanded[key] !== false;
     let h = `<div class="free-group-head" onclick="toggleFreeGroup('${key}')"><span class="arw">${open?'▼':'▶'}</span><span class="nm" style="color:${NAT_COLOR[nat].c}">${NAT_NAME[nat]} · ${TY_CN[ty]}</span><span class="cnt">${list.length}</span></div>`;
     if(open) h += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:4px;padding:4px 0 8px 12px">${list.map(n => `<div class="tank-chip" style="font-size:10.5px" onclick="toggleFreePick('${esc(n)}')">${TY_ICON[TANKS[n].ty]}<span class="n">${esc(n)}</span></div>`).join('')}</div>`;
     return h;
   }
+
   let html = `<h1>🎮 自由模式 · ${isAI ? 'AI' : '热座'}</h1><div class="sub">每方最多 6 辆</div>`;
   if(!isAI) html += `<div class="tabs2"><button class="${F.side === 'p' ? 'act' : ''}" onclick="setFreeSide('p')">🔵 蓝方 ${P.length}/6</button><button class="${F.side === 'e' ? 'act' : ''}" onclick="setFreeSide('e')">🔴 红方 ${E.length}/6</button></div>`;
   else html += `<div class="tabs2"><button class="act">🔵 蓝方 ${P.length}/6</button><button style="opacity:.5">🤖 AI</button></div>`;
+
+  html += `<div class="tabs2" style="margin-top:8px">${allNations.map(n => `<button class="${F.tab === n ? 'act' : ''}" onclick="setFreeTab('${n}')" style="color:${NAT_COLOR[n].c}">${NAT_NAME[n]}</button>`).join('')}</div>`;
+
+  const curNat = F.tab;
   html += `<div class="panel" style="max-height:40vh;overflow-y:auto">`;
-  for(const n of ['德','美','苏']){ html += `<h3 style="color:${NAT_COLOR[n].c}">${NAT_NAME[n]}</h3>`; for(const ty of ['light','medium','heavy','td']) html += gH(n, ty); }
+  html += `<h3 style="color:${NAT_COLOR[curNat].c}">${NAT_NAME[curNat]}</h3>`;
+  for(const ty of ['light','medium','heavy','td']) html += gH(curNat, ty);
   html += `</div>`;
+
   html += `<div class="panel"><h3>${F.side === 'p' ? '🔵 蓝方' : '🔴 红方'}已选 (${curTeam.length}/6)</h3>
-    ${curTeam.length ? `<div class="tank-list">${curTeam.map((n, i) => `<div class="tank-chip sel" onclick="removeFreeTank(${i})">${TY_ICON[TANKS[n].ty]}${esc(n)} ×</div>`).join('')}</div>` : '<div style="color:#5a6a5a;font-size:12px">点击上方加入</div>'}
+    ${curTeam.length ? `<div class="tank-list">${curTeam.map((n, i) => `<div class="tank-chip sel" onclick="removeFreeTank(${i})">${TY_ICON[(TANKS[n] || {ty:'light'}).ty]}${esc(n)} ×</div>`).join('')}</div>` : '<div style="color:#5a6a5a;font-size:12px">点击上方加入</div>'}
   </div>`;
+
   const pTacStr = (F.pTacs || []).map(id => { const t = TACTICALS.find(x => x.id === id); return t ? t.name : '?'; }).join(' · ') || '无';
   const eTacStr = (F.eTacs || []).map(id => { const t = TACTICALS.find(x => x.id === id); return t ? t.name : '?'; }).join(' · ') || '无';
   html += `<div class="panel"><h3>🎯 指令</h3>
@@ -526,6 +569,7 @@ function renderFreeSelect(){
       ${!isAI ? `<button class="btn ghost" style="flex:1" onclick="openFreeTacSelect('e')">🔴 红方 (${(F.eTacs || []).length}/2)<br><span style="font-size:10px;opacity:.75">${eTacStr}</span></button>` : ''}
     </div>
   </div>`;
+
   html += `<div class="btns" style="margin-top:auto">
     <button class="btn pri" onclick="startFreeBattle()" ${(P.length && (isAI || E.length)) ? '' : 'disabled'}>开始战斗</button>
     ${!isAI ? `<button class="btn" onclick="clearFreeTeam()">清空</button>` : ''}
@@ -535,6 +579,8 @@ function renderFreeSelect(){
   </div>`;
   return html;
 }
+
+function setFreeTab(n){ F.tab = n; render(); }
 function toggleFreeGroup(key){ F.expanded[key] = F.expanded[key] === false ? true : false; render(); }
 function toggleFreePick(name){
   const team = F.side === 'p' ? F.team.p : F.team.e;
